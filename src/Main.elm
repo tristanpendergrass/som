@@ -4,7 +4,7 @@ import Browser
 import Html exposing (Html, h1, text)
 
 
-main : Program () Model Msg
+main : Program (Maybe Int) Model Msg
 main =
     Browser.element { init = init, update = update, view = view, subscriptions = subscriptions }
 
@@ -13,13 +13,29 @@ main =
 -- MODEL
 
 
+type alias Id =
+    Int
+
+
+
+-- type alias TabData =
+--     { id : Id
+--     , url : String
+--     }
+
+
 type alias Model =
-    {}
+    { activeTabId : Maybe Id
+
+    -- , tabs : Dict Id TabData
+    }
 
 
-init : () -> ( Model, Cmd Msg )
-init _ =
-    ( {}, Cmd.none )
+init : Maybe Int -> ( Model, Cmd Msg )
+init initialActiveTabId =
+    ( { activeTabId = initialActiveTabId }
+    , Cmd.none
+    )
 
 
 
@@ -51,5 +67,15 @@ subscriptions _ =
 
 
 view : Model -> Html Msg
-view _ =
-    h1 [] [ text "Hello SOM..." ]
+view model =
+    let
+        activeTabLabel : String
+        activeTabLabel =
+            case model.activeTabId of
+                Nothing ->
+                    "N/A"
+
+                Just id ->
+                    String.fromInt id
+    in
+    h1 [] [ text ("Active Tab ID: " ++ activeTabLabel) ]

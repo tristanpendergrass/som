@@ -9,5 +9,5 @@
     "default_popup": "dist/index.html"
   },
 
-  "permissions": ["activeTab"]
+  "permissions": ["tabs"]
 }
