@@ -1,1 +1,0 @@
-{"version":3,"sources":["test.js"],"names":["window","sayHello","console","log"],"mappings":";AAAAA,OAAOC,SAAW,WAAMC,OAAAA,QAAQC,IAAI","file":"test.fa57f883.js","sourceRoot":"../src","sourcesContent":["window.sayHello = () => console.log(\"hello\");\n"]}

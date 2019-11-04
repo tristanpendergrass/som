@@ -3,4 +3,5 @@ elm.js
 node_modules
 .vscode
 .cache
+dist
 temp
