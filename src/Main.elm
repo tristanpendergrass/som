@@ -1,7 +1,8 @@
-module Main exposing (main)
+port module Main exposing (main)
 
 import Browser
 import Html exposing (Html, h1, text)
+import Json.Encode as E
 
 
 main : Program (Maybe Int) Model Msg
@@ -43,23 +44,26 @@ init initialActiveTabId =
 
 
 type Msg
-    = NoOp
+    = SetActiveTab (Maybe Int)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        NoOp ->
-            ( model, Cmd.none )
+        SetActiveTab id ->
+            ( { model | activeTabId = id }, Cmd.none )
 
 
 
 -- SUBSCRIPTIONS
 
 
+port activeTab : (Maybe Int -> msg) -> Sub msg
+
+
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.none
+    activeTab (\id -> SetActiveTab id)
 
 
 

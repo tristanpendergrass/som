@@ -8,25 +8,25 @@
 //   });
 // });
 
-// window.setParam = (key, value) => {
-//   chrome.tabs.query({ active: true }, ([tab]) => {
+// window.testSet = () => {
+//   chrome.tabs.query({}, ([tab, ...restOfTabs]) => {
+//     console.log({ tab, restOfTabs });
 //     if (tab !== undefined) {
-//       const url = tab.url + `?${key}=${value}`;
+//       const url = tab.url + `?foo=bar`;
 //       console.log("url", url);
 //       chrome.tabs.update(tab.id, { url });
 //     }
 //   });
-//   window.close();
 // };
 
-chrome.tabs.query({}, tabs => {
-  console.log("init", tabs.map(tab => tab.url));
-});
+// chrome.tabs.query({}, tabs => {
+//   console.log("init", tabs.map(tab => tab.url));
+// });
 
-chrome.tabs.onActivated.addListener((tabId, windowId) => {
-  console.log("onActivated", { tabId, windowId });
-});
+// chrome.tabs.onActivated.addListener((tabId, windowId) => {
+//   console.log("onActivated", { tabId, windowId });
+// });
 
-chrome.tabs.onUpdated.addListener((tabId, _, { url }) => {
-  console.log("onUpdated", { tabId, url });
-});
+// chrome.tabs.onUpdated.addListener((tabId, _, { url }) => {
+//   console.log("onUpdated", { tabId, url });
+// });
