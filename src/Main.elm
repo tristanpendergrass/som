@@ -5,7 +5,7 @@ import Html exposing (Html, h1, text)
 import Json.Encode as E
 
 
-main : Program (Maybe Int) Model Msg
+main : Program String Model Msg
 main =
     Browser.element { init = init, update = update, view = view, subscriptions = subscriptions }
 
@@ -26,15 +26,15 @@ type alias Id =
 
 
 type alias Model =
-    { activeTabId : Maybe Id
+    { browserUrl : String
 
     -- , tabs : Dict Id TabData
     }
 
 
-init : Maybe Int -> ( Model, Cmd Msg )
-init initialActiveTabId =
-    ( { activeTabId = initialActiveTabId }
+init : String -> ( Model, Cmd Msg )
+init initialBrowserUrl =
+    ( { browserUrl = initialBrowserUrl }
     , Cmd.none
     )
 
@@ -44,26 +44,26 @@ init initialActiveTabId =
 
 
 type Msg
-    = SetActiveTab (Maybe Int)
+    = SetBrowserUrl String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        SetActiveTab id ->
-            ( { model | activeTabId = id }, Cmd.none )
+        SetBrowserUrl url ->
+            ( { model | browserUrl = url }, Cmd.none )
 
 
 
 -- SUBSCRIPTIONS
 
 
-port activeTab : (Maybe Int -> msg) -> Sub msg
+port browserUrl : (String -> msg) -> Sub msg
 
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    activeTab (\id -> SetActiveTab id)
+    browserUrl (\url -> SetBrowserUrl url)
 
 
 
@@ -72,14 +72,4 @@ subscriptions _ =
 
 view : Model -> Html Msg
 view model =
-    let
-        activeTabLabel : String
-        activeTabLabel =
-            case model.activeTabId of
-                Nothing ->
-                    "N/A"
-
-                Just id ->
-                    String.fromInt id
-    in
-    h1 [] [ text ("Active Tab ID: " ++ activeTabLabel) ]
+    h1 [] [ text ("Url: " ++ model.browserUrl) ]
