@@ -1,7 +1,8 @@
 port module Main exposing (main)
 
 import Browser
-import Html exposing (Html, h1, text)
+import Html exposing (Html, button, div, h1, text)
+import Html.Events exposing (onClick)
 import Json.Encode as E
 
 
@@ -14,21 +15,8 @@ main =
 -- MODEL
 
 
-type alias Id =
-    Int
-
-
-
--- type alias TabData =
---     { id : Id
---     , url : String
---     }
-
-
 type alias Model =
     { browserUrl : String
-
-    -- , tabs : Dict Id TabData
     }
 
 
@@ -43,8 +31,12 @@ init initialBrowserUrl =
 -- UPDATE
 
 
+port sendUrl : String -> Cmd msg
+
+
 type Msg
     = SetBrowserUrl String
+    | SendBrowserUrl String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -52,6 +44,14 @@ update msg model =
     case msg of
         SetBrowserUrl url ->
             ( { model | browserUrl = url }, Cmd.none )
+
+        SendBrowserUrl url ->
+            let
+                newUrl : String
+                newUrl =
+                    model.browserUrl ++ url
+            in
+            ( { model | browserUrl = newUrl }, sendUrl <| newUrl )
 
 
 
@@ -72,4 +72,7 @@ subscriptions _ =
 
 view : Model -> Html Msg
 view model =
-    h1 [] [ text ("Url: " ++ model.browserUrl) ]
+    div []
+        [ h1 [] [ text ("Url: " ++ model.browserUrl) ]
+        , button [ onClick (SendBrowserUrl "&stormcrow_override=browse_rename_use_api_v2:ON") ] [ text "Set URL" ]
+        ]
