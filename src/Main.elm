@@ -15,6 +15,12 @@ main =
     Browser.element { init = init, update = update, view = view, subscriptions = subscriptions }
 
 
+colon : Regex.Regex
+colon =
+    Maybe.withDefault Regex.never <|
+        Regex.fromString ":|%3A"
+
+
 queryParamsFromUrl : String -> List QueryParam
 queryParamsFromUrl url =
     Url.fromString url
@@ -32,17 +38,11 @@ queryParamsFromUrl url =
 queryParamFromString : String -> QueryParam
 queryParamFromString param =
     if String.startsWith "stormcrow_override=" param then
-        let
-            value : String
-            value =
-                String.dropLeft 19 param
-
-            colonSeparator : Regex.Regex
-            colonSeparator =
-                Maybe.withDefault Regex.never <|
-                    Regex.fromString ":|%3A"
-        in
-        case Regex.split colonSeparator value of
+        case
+            param
+                |> String.dropLeft 19
+                |> Regex.split colon
+        of
             [] ->
                 OtherParam param
 
