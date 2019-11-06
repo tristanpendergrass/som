@@ -4,16 +4,57 @@ import Browser
 import Html exposing (Html, button, div, h1, li, option, select, span, text, ul)
 import Html.Attributes exposing (value)
 import Html.Events exposing (onClick, onInput)
-import Json.Encode as E
 import List
-import Set exposing (Set)
 import String
-import Task
+import Url
 
 
 main : Program String Model Msg
 main =
     Browser.element { init = init, update = update, view = view, subscriptions = subscriptions }
+
+
+queryParamsFromUrl : String -> List QueryParam
+queryParamsFromUrl url =
+    case Url.fromString url of
+        Nothing ->
+            []
+
+        Just { query } ->
+            case query of
+                Nothing ->
+                    []
+
+                Just queryString ->
+                    List.map queryParamFromString (String.split "&" queryString)
+
+
+{-| Turn a string into a QueryParam.
+
+  - Will make it a StormcrowParam if it fits the format. e.g. "stormcrow\_override=foo:bar"
+  - Will make it an OtherParam if it does not fit. e.g. "shtormcrow\_override=foo:bar", "stormcrow\_override=foobar", "bar=baz"
+
+-}
+queryParamFromString : String -> QueryParam
+queryParamFromString param =
+    if String.startsWith "stormcrow_override=" param then
+        let
+            value : String
+            value =
+                String.dropLeft 19 param
+        in
+        case String.split ":" value of
+            [] ->
+                OtherParam param
+
+            [ feature, variant ] ->
+                StormcrowParam feature variant
+
+            _ ->
+                OtherParam param
+
+    else
+        OtherParam param
 
 
 
@@ -24,9 +65,22 @@ type alias Id =
     Int
 
 
+type alias Feature =
+    String
+
+
+type alias Variant =
+    String
+
+
+type QueryParam
+    = StormcrowParam Feature Variant
+    | OtherParam String
+
+
 type VariantSelection
-    = NotSelected
-    | Variant String
+    = EmptySelection
+    | VariantSelection Variant
 
 
 type alias Override =
@@ -52,7 +106,7 @@ init initialBrowserUrl =
             [ { id = 0
               , feature = "foo"
               , variants = [ "OFF", "ON" ]
-              , selectedVariant = NotSelected
+              , selectedVariant = EmptySelection
               }
             ]
       }
@@ -107,10 +161,10 @@ update msg model =
                     { override
                         | selectedVariant =
                             if selection == "" then
-                                NotSelected
+                                EmptySelection
 
                             else
-                                Variant selection
+                                VariantSelection selection
                     }
 
                 newOverrides : List Override
@@ -124,10 +178,10 @@ update msg model =
                 reduceOverrides : Override -> List String -> List String
                 reduceOverrides override accumulator =
                     case override.selectedVariant of
-                        NotSelected ->
+                        EmptySelection ->
                             accumulator
 
-                        Variant value ->
+                        VariantSelection value ->
                             ("stormcrow_override=" ++ override.feature ++ ":" ++ value) :: accumulator
 
                 parameters : List String
@@ -167,10 +221,10 @@ renderOverride override =
         selectValue : String
         selectValue =
             case override.selectedVariant of
-                NotSelected ->
+                EmptySelection ->
                     ""
 
-                Variant value ->
+                VariantSelection value ->
                     value
     in
     li []
