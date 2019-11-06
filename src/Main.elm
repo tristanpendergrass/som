@@ -16,17 +16,10 @@ main =
 
 queryParamsFromUrl : String -> List QueryParam
 queryParamsFromUrl url =
-    case Url.fromString url of
-        Nothing ->
-            []
-
-        Just { query } ->
-            case query of
-                Nothing ->
-                    []
-
-                Just queryString ->
-                    List.map queryParamFromString (String.split "&" queryString)
+    Url.fromString url
+        |> Maybe.andThen .query
+        |> Maybe.map (String.split "&" >> List.map queryParamFromString)
+        |> Maybe.withDefault []
 
 
 {-| Turn a string into a QueryParam.
