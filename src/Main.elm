@@ -5,6 +5,7 @@ import Html exposing (Html, button, div, h1, li, option, select, span, text, ul)
 import Html.Attributes exposing (value)
 import Html.Events exposing (onClick, onInput)
 import List
+import Regex
 import String
 import Url
 
@@ -35,8 +36,13 @@ queryParamFromString param =
             value : String
             value =
                 String.dropLeft 19 param
+
+            colonSeparator : Regex.Regex
+            colonSeparator =
+                Maybe.withDefault Regex.never <|
+                    Regex.fromString ":|%3A"
         in
-        case String.split ":" value of
+        case Regex.split colonSeparator value of
             [] ->
                 OtherParam param
 
@@ -87,6 +93,7 @@ type alias Override =
 type alias Model =
     { nonce : Int
     , browserUrl : String
+    , queryParams : List QueryParam
     , overrides : List Override
     }
 
@@ -95,6 +102,7 @@ init : String -> ( Model, Cmd Msg )
 init initialBrowserUrl =
     ( { nonce = 100
       , browserUrl = initialBrowserUrl
+      , queryParams = queryParamsFromUrl initialBrowserUrl
       , overrides =
             [ { id = 0
               , feature = "foo"
@@ -231,6 +239,18 @@ view : Model -> Html Msg
 view model =
     div []
         [ h1 [] [ text ("Url: " ++ model.browserUrl) ]
+        , ul []
+            (List.map
+                (\queryParam ->
+                    case queryParam of
+                        OtherParam otherParam ->
+                            li [] [ text otherParam ]
+
+                        StormcrowParam feature variant ->
+                            li [] [ text (feature ++ ":" ++ variant) ]
+                )
+                model.queryParams
+            )
         , button [ onClick (SendBrowserUrl "&stormcrow_override=browse_rename_use_api_v2:ON") ] [ text "Set URL" ]
         , ul [] (List.map renderOverride model.overrides)
         , button [ onClick ApplyOverrides ] [ text "Apply Overrides" ]
