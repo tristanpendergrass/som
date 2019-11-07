@@ -1,9 +1,9 @@
 port module Main exposing (main)
 
 import Browser
-import Html exposing (Html, button, div, li, option, select, span, text, ul)
-import Html.Attributes exposing (value)
-import Html.Events exposing (onClick, onInput)
+import Html exposing (Html, button, div, form, input, li, option, select, span, text, ul)
+import Html.Attributes exposing (type_, value)
+import Html.Events exposing (onClick, onInput, onSubmit)
 import List
 import QueryParams
 import Url exposing (Url)
@@ -22,14 +22,22 @@ type alias Id =
     Int
 
 
+type alias Feature =
+    String
+
+
+type alias Variant =
+    String
+
+
 type alias VariantSelection =
-    Maybe QueryParams.Variant
+    Maybe Variant
 
 
 type alias Override =
     { id : Id
-    , feature : String
-    , variants : List String
+    , feature : Feature
+    , variants : List Variant
     , selectedVariant : VariantSelection
     }
 
@@ -38,7 +46,13 @@ type alias Model =
     { nonce : Int
     , browserUrl : Maybe Url
     , overrides : List Override
+    , feature : String
     }
+
+
+defaultVariants : List Variant
+defaultVariants =
+    [ "OFF", "ON" ]
 
 
 init : String -> ( Model, Cmd Msg )
@@ -48,10 +62,11 @@ init initialBrowserUrl =
       , overrides =
             [ { id = 0
               , feature = "foo"
-              , variants = [ "OFF", "ON" ]
+              , variants = defaultVariants
               , selectedVariant = Nothing
               }
             ]
+      , feature = ""
       }
     , Cmd.none
     )
@@ -68,6 +83,9 @@ type Msg
     = SetBrowserUrl String
     | HandleSelectedVariantInput Override String
     | ApplyOverrides
+      -- Add Override
+    | HandleAddOverrideFeatureInput String
+    | HandleAddOverrideSubmit
 
 
 applyOverridesToUrl : List Override -> Url -> Url
@@ -149,6 +167,21 @@ update msg model =
                     in
                     ( model, sendUrl <| Url.toString newUrl )
 
+        HandleAddOverrideFeatureInput feature ->
+            ( { model | feature = feature }, Cmd.none )
+
+        HandleAddOverrideSubmit ->
+            let
+                newOverride : Override
+                newOverride =
+                    Override model.nonce model.feature defaultVariants Nothing
+
+                newOverrides : List Override
+                newOverrides =
+                    newOverride :: model.overrides
+            in
+            ( { model | nonce = model.nonce + 1, overrides = newOverrides, feature = "" }, Cmd.none )
+
 
 
 -- SUBSCRIPTIONS
@@ -164,6 +197,16 @@ subscriptions _ =
 
 
 -- VIEW
+
+
+renderAddOverride : Model -> Html Msg
+renderAddOverride model =
+    li []
+        [ form [ onSubmit HandleAddOverrideSubmit ]
+            [ button [ type_ "submit" ] [ text "+" ]
+            , input [ value model.feature, onInput HandleAddOverrideFeatureInput ] []
+            ]
+        ]
 
 
 renderOverride : Override -> Html Msg
@@ -185,13 +228,15 @@ renderOverride override =
     li []
         [ span [] [ text override.feature ]
         , select [ onInput (HandleSelectedVariantInput override), value selectValue ] (List.map renderOption ("" :: override.variants))
-        , span [] [ text ("Selected: " ++ selectValue) ]
         ]
 
 
 view : Model -> Html Msg
 view model =
     div []
-        [ ul [] (List.map renderOverride model.overrides)
+        [ ul []
+            (renderAddOverride model
+                :: List.map renderOverride model.overrides
+            )
         , button [ onClick ApplyOverrides ] [ text "Apply Overrides" ]
         ]

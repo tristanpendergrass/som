@@ -1,4 +1,4 @@
-module QueryParams exposing (Feature, QueryParam(..), Variant, applyOverride, fromUrl, toString)
+module QueryParams exposing (QueryParam(..), applyOverride, fromUrl, toString)
 
 import Regex
 import Url exposing (Url)
@@ -25,8 +25,10 @@ colon =
 
 {-| Decode a string as a query param.
 e.g.
-- singleFromString "foo=bar" == OtherParam "foo=bar"
-- singleFromString "stormcrow\_override=foo:bar" == StormcrowParam "foo" "bar"
+
+  - singleFromString "foo=bar" == OtherParam "foo=bar"
+  - singleFromString "stormcrow\_override=foo:bar" == StormcrowParam "foo" "bar"
+
 -}
 singleFromString : String -> QueryParam
 singleFromString param =
