@@ -4,6 +4,7 @@ import Browser
 import Html exposing (Html, button, div, form, input, li, span, text, ul)
 import Html.Attributes exposing (type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
+import Json.Encode as E
 import List
 import QueryParams
 import Url exposing (Url)
@@ -79,13 +80,25 @@ init initialBrowserUrl =
 port sendUrl : String -> Cmd msg
 
 
-type Msg
-    = SetBrowserUrl String
-    | HandleSelectedVariantInput Override String
-    | ApplyOverrides
-      -- Add Override
-    | HandleAddOverrideFeatureInput String
-    | HandleAddOverrideSubmit
+port sendToLocalStorage : E.Value -> Cmd msg
+
+
+encodeModel : Model -> E.Value
+encodeModel model =
+    let
+        overrideToJson : Override -> E.Value
+        overrideToJson { id, feature, variants, selectedVariant } =
+            E.object
+                [ ( "id", E.int id )
+                , ( "feature", E.string feature )
+                , ( "variants", E.list E.string variants )
+                , ( "selectedVariant", E.string <| Maybe.withDefault "" selectedVariant )
+                ]
+    in
+    E.object
+        [ ( "nonce", E.int model.nonce )
+        , ( "overrides", E.list overrideToJson model.overrides )
+        ]
 
 
 applyOverridesToUrl : List Override -> Url -> Url
@@ -129,6 +142,15 @@ replace oldA newA =
         )
 
 
+type Msg
+    = SetBrowserUrl String
+    | HandleSelectedVariantInput Override String
+    | ApplyOverrides
+      -- Add Override
+    | HandleAddOverrideFeatureInput String
+    | HandleAddOverrideSubmit
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -151,8 +173,12 @@ update msg model =
                 newOverrides : List Override
                 newOverrides =
                     replace override newOverride model.overrides
+
+                newModel : Model
+                newModel =
+                    { model | overrides = newOverrides }
             in
-            ( { model | overrides = newOverrides }, Cmd.none )
+            ( newModel, sendToLocalStorage <| encodeModel newModel )
 
         ApplyOverrides ->
             case model.browserUrl of
@@ -179,8 +205,12 @@ update msg model =
                 newOverrides : List Override
                 newOverrides =
                     newOverride :: model.overrides
+
+                newModel : Model
+                newModel =
+                    { model | nonce = model.nonce + 1, overrides = newOverrides, feature = "" }
             in
-            ( { model | nonce = model.nonce + 1, overrides = newOverrides, feature = "" }, Cmd.none )
+            ( newModel, sendToLocalStorage <| encodeModel model )
 
 
 

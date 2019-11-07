@@ -9,4 +9,11 @@ chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
   app.ports.sendUrl.subscribe(url => {
     chrome.tabs.update(tab.id, { url });
   });
+
+  app.ports.sendToLocalStorage.subscribe(data => {
+    localStorage.setItem(
+      "stormcrow_override_manager_data",
+      JSON.stringify(data)
+    );
+  });
 });
