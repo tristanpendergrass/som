@@ -1,7 +1,7 @@
 port module Main exposing (main)
 
 import Browser
-import Html exposing (Html, button, div, form, input, li, option, select, span, text, ul)
+import Html exposing (Html, button, div, form, input, li, span, text, ul)
 import Html.Attributes exposing (type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import List
@@ -211,23 +211,11 @@ renderAddOverride model =
 
 renderOverride : Override -> Html Msg
 renderOverride override =
-    let
-        renderOption : String -> Html Msg
-        renderOption variant =
-            option [ value variant ] [ text variant ]
-
-        selectValue : String
-        selectValue =
-            case override.selectedVariant of
-                Nothing ->
-                    ""
-
-                Just value ->
-                    value
-    in
     li []
         [ span [] [ text override.feature ]
-        , select [ onInput (HandleSelectedVariantInput override), value selectValue ] (List.map renderOption ("" :: override.variants))
+        , form [ onSubmit ApplyOverrides ]
+            [ input [ onInput (HandleSelectedVariantInput override) ] []
+            ]
         ]
 
 
