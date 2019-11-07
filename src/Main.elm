@@ -1,13 +1,13 @@
 port module Main exposing (main)
 
 import Browser
-import Html exposing (Html, button, div, h1, li, option, select, span, text, ul)
+import Html exposing (Html, button, div, li, option, select, span, text, ul)
 import Html.Attributes exposing (value)
 import Html.Events exposing (onClick, onInput)
 import List
 import Regex
 import String
-import Url
+import Url exposing (Url)
 
 
 main : Program String Model Msg
@@ -21,12 +21,16 @@ colon =
         Regex.fromString ":|%3A"
 
 
-queryParamsFromUrl : String -> List QueryParam
+queryParamsFromUrl : Url -> List QueryParam
 queryParamsFromUrl url =
-    Url.fromString url
-        |> Maybe.andThen .query
-        |> Maybe.map (String.split "&" >> List.map queryParamFromString)
-        |> Maybe.withDefault []
+    case url.query of
+        Nothing ->
+            []
+
+        Just query ->
+            query
+                |> String.split "&"
+                |> List.map queryParamFromString
 
 
 {-| Turn a string into a QueryParam.
@@ -54,6 +58,100 @@ queryParamFromString param =
 
     else
         OtherParam param
+
+
+stringFromQueryParam : QueryParam -> String
+stringFromQueryParam param =
+    case param of
+        OtherParam value ->
+            value
+
+        StormcrowParam feature variant ->
+            "stormcrow_override=" ++ feature ++ ":" ++ variant
+
+
+{-| Iterate over a list of query params and either modify the params matching the override or
+append a new StormcrowParam at the end if no param matched the override
+
+    e.g.
+
+    applyOverride
+        { feature = Feature "foo", selectedVariant = Variant "bar" }
+        [ OtherParam "other=value", StormcrowParam "foo" "baz" ]
+
+    -- equals [ OtherParam "other=value", StormcrowParam "foo" "bar" ]
+
+    -- OR
+
+    applyOverride
+        { feature = Feature "foo", selectedVariant = Variant "bar" }
+        [ OtherParam "other=value", StormcrowParam "baz" "bing" ]
+
+    -- equals [ OtherParam "other=value", StormcrowParam "baz" "bing", StormcrowParam "foo" "bar" ]
+
+-}
+applyOverride : Override -> List QueryParam -> List QueryParam
+applyOverride override queryParams =
+    case override.selectedVariant of
+        EmptySelection ->
+            queryParams
+
+        VariantSelection variant ->
+            let
+                ( overridePresent, newQueryParams ) =
+                    List.foldr
+                        (\queryParam ->
+                            \( found, accQueryParams ) ->
+                                case queryParam of
+                                    OtherParam _ ->
+                                        ( found, queryParam :: accQueryParams )
+
+                                    StormcrowParam feature _ ->
+                                        if feature == override.feature then
+                                            ( True, StormcrowParam feature variant :: accQueryParams )
+
+                                        else
+                                            ( found, queryParam :: accQueryParams )
+                        )
+                        ( False, [] )
+                        queryParams
+            in
+            if overridePresent then
+                newQueryParams
+
+            else
+                List.append queryParams [ StormcrowParam override.feature variant ]
+
+
+queryStringFromQueryParams : List QueryParam -> Maybe String
+queryStringFromQueryParams queryParams =
+    case queryParams of
+        [] ->
+            Nothing
+
+        params ->
+            params
+                |> List.map stringFromQueryParam
+                |> String.join "&"
+                |> Just
+
+
+applyOverridesToUrl : List Override -> Url -> Url
+applyOverridesToUrl overrides oldUrl =
+    let
+        oldParams : List QueryParam
+        oldParams =
+            queryParamsFromUrl oldUrl
+
+        newParams : List QueryParam
+        newParams =
+            List.foldl applyOverride oldParams overrides
+
+        newUrl : Url
+        newUrl =
+            { oldUrl | query = queryStringFromQueryParams newParams }
+    in
+    newUrl
 
 
 
@@ -92,8 +190,7 @@ type alias Override =
 
 type alias Model =
     { nonce : Int
-    , browserUrl : String
-    , queryParams : List QueryParam
+    , browserUrl : Maybe Url
     , overrides : List Override
     }
 
@@ -101,8 +198,7 @@ type alias Model =
 init : String -> ( Model, Cmd Msg )
 init initialBrowserUrl =
     ( { nonce = 100
-      , browserUrl = initialBrowserUrl
-      , queryParams = queryParamsFromUrl initialBrowserUrl
+      , browserUrl = Url.fromString initialBrowserUrl
       , overrides =
             [ { id = 0
               , feature = "foo"
@@ -124,7 +220,6 @@ port sendUrl : String -> Cmd msg
 
 type Msg
     = SetBrowserUrl String
-    | SendBrowserUrl String
     | HandleSelectedVariantInput Override String
     | ApplyOverrides
 
@@ -145,15 +240,7 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         SetBrowserUrl url ->
-            ( { model | browserUrl = url }, Cmd.none )
-
-        SendBrowserUrl url ->
-            let
-                newUrl : String
-                newUrl =
-                    model.browserUrl ++ url
-            in
-            ( { model | browserUrl = newUrl }, sendUrl newUrl )
+            ( { model | browserUrl = Url.fromString url }, Cmd.none )
 
         HandleSelectedVariantInput override selection ->
             let
@@ -175,25 +262,17 @@ update msg model =
             ( { model | overrides = newOverrides }, Cmd.none )
 
         ApplyOverrides ->
-            let
-                reduceOverrides : Override -> List String -> List String
-                reduceOverrides override accumulator =
-                    case override.selectedVariant of
-                        EmptySelection ->
-                            accumulator
+            case model.browserUrl of
+                Nothing ->
+                    ( model, Cmd.none )
 
-                        VariantSelection value ->
-                            ("stormcrow_override=" ++ override.feature ++ ":" ++ value) :: accumulator
-
-                parameters : List String
-                parameters =
-                    List.foldl reduceOverrides [] model.overrides
-
-                newUrl : String
-                newUrl =
-                    model.browserUrl ++ "?" ++ String.join "&" parameters
-            in
-            ( model, sendUrl newUrl )
+                Just oldUrl ->
+                    let
+                        newUrl : Url
+                        newUrl =
+                            applyOverridesToUrl model.overrides oldUrl
+                    in
+                    ( model, sendUrl <| Url.toString newUrl )
 
 
 
@@ -238,20 +317,6 @@ renderOverride override =
 view : Model -> Html Msg
 view model =
     div []
-        [ h1 [] [ text ("Url: " ++ model.browserUrl) ]
-        , ul []
-            (List.map
-                (\queryParam ->
-                    case queryParam of
-                        OtherParam otherParam ->
-                            li [] [ text otherParam ]
-
-                        StormcrowParam feature variant ->
-                            li [] [ text (feature ++ ":" ++ variant) ]
-                )
-                model.queryParams
-            )
-        , button [ onClick (SendBrowserUrl "&stormcrow_override=browse_rename_use_api_v2:ON") ] [ text "Set URL" ]
-        , ul [] (List.map renderOverride model.overrides)
+        [ ul [] (List.map renderOverride model.overrides)
         , button [ onClick ApplyOverrides ] [ text "Apply Overrides" ]
         ]
