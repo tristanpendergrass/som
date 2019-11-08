@@ -4,13 +4,14 @@ import Browser
 import Html exposing (Html, button, div, form, input, li, span, text, ul)
 import Html.Attributes exposing (type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
+import Json.Decode as D
 import Json.Encode as E
 import List
 import QueryParams
 import Url exposing (Url)
 
 
-main : Program String Model Msg
+main : Program ( String, D.Value ) Model Msg
 main =
     Browser.element { init = init, update = update, view = view, subscriptions = subscriptions }
 
@@ -31,15 +32,10 @@ type alias Variant =
     String
 
 
-type alias VariantSelection =
-    Maybe Variant
-
-
 type alias Override =
     { id : Id
     , feature : Feature
-    , variants : List Variant
-    , selectedVariant : VariantSelection
+    , variantSelection : Maybe Variant
     }
 
 
@@ -51,22 +47,45 @@ type alias Model =
     }
 
 
-defaultVariants : List Variant
-defaultVariants =
-    [ "OFF", "ON" ]
+init : ( String, D.Value ) -> ( Model, Cmd Msg )
+init ( initialBrowserUrl, localStorageData ) =
+    let
+        nonce : Int
+        nonce =
+            case D.decodeValue (D.field "nonce" D.int) localStorageData of
+                Ok val ->
+                    val
 
+                Err _ ->
+                    100
 
-init : String -> ( Model, Cmd Msg )
-init initialBrowserUrl =
-    ( { nonce = 100
+        stringToVariantSelection : String -> Maybe Variant
+        stringToVariantSelection value =
+            if value == "" then
+                Nothing
+
+            else
+                Just value
+
+        overrideDecoder : D.Decoder Override
+        overrideDecoder =
+            D.map3 Override
+                (D.field "id" D.int)
+                (D.field "feature" D.string)
+                (D.field "variantSelection" (D.map stringToVariantSelection D.string))
+
+        overrides : List Override
+        overrides =
+            case D.decodeValue (D.field "overrides" (D.list overrideDecoder)) localStorageData of
+                Ok val ->
+                    val
+
+                Err _ ->
+                    []
+    in
+    ( { nonce = nonce
       , browserUrl = Url.fromString initialBrowserUrl
-      , overrides =
-            [ { id = 0
-              , feature = "foo"
-              , variants = defaultVariants
-              , selectedVariant = Nothing
-              }
-            ]
+      , overrides = overrides
       , feature = ""
       }
     , Cmd.none
@@ -87,12 +106,11 @@ encodeModel : Model -> E.Value
 encodeModel model =
     let
         overrideToJson : Override -> E.Value
-        overrideToJson { id, feature, variants, selectedVariant } =
+        overrideToJson { id, feature, variantSelection } =
             E.object
                 [ ( "id", E.int id )
                 , ( "feature", E.string feature )
-                , ( "variants", E.list E.string variants )
-                , ( "selectedVariant", E.string <| Maybe.withDefault "" selectedVariant )
+                , ( "variantSelection", E.string <| Maybe.withDefault "" variantSelection )
                 ]
     in
     E.object
@@ -113,7 +131,7 @@ applyOverridesToUrl overrides oldUrl =
             List.foldl
                 (\override ->
                     \accumulator ->
-                        case override.selectedVariant of
+                        case override.variantSelection of
                             Nothing ->
                                 accumulator
 
@@ -144,7 +162,7 @@ replace oldA newA =
 
 type Msg
     = SetBrowserUrl String
-    | HandleSelectedVariantInput Override String
+    | HandleVariantSelectionInput Override String
     | ApplyOverrides
       -- Add Override
     | HandleAddOverrideFeatureInput String
@@ -157,12 +175,12 @@ update msg model =
         SetBrowserUrl url ->
             ( { model | browserUrl = Url.fromString url }, Cmd.none )
 
-        HandleSelectedVariantInput override selection ->
+        HandleVariantSelectionInput override selection ->
             let
                 newOverride : Override
                 newOverride =
                     { override
-                        | selectedVariant =
+                        | variantSelection =
                             if selection == "" then
                                 Nothing
 
@@ -200,7 +218,7 @@ update msg model =
             let
                 newOverride : Override
                 newOverride =
-                    Override model.nonce model.feature defaultVariants Nothing
+                    Override model.nonce model.feature Nothing
 
                 newOverrides : List Override
                 newOverrides =
@@ -241,10 +259,15 @@ renderAddOverride model =
 
 renderOverride : Override -> Html Msg
 renderOverride override =
+    let
+        variantValue : String
+        variantValue =
+            override.variantSelection |> Maybe.withDefault ""
+    in
     li []
         [ span [] [ text override.feature ]
         , form [ onSubmit ApplyOverrides ]
-            [ input [ onInput (HandleSelectedVariantInput override) ] []
+            [ input [ value variantValue, onInput (HandleVariantSelectionInput override) ] []
             ]
         ]
 
@@ -257,4 +280,5 @@ view model =
                 :: List.map renderOverride model.overrides
             )
         , button [ onClick ApplyOverrides ] [ text "Apply Overrides" ]
+        , div [] [ text ("nonce:" ++ String.fromInt model.nonce) ]
         ]
