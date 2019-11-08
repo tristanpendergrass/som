@@ -296,10 +296,10 @@ update msg model =
                 ( Just override, NotEditing ) ->
                     ( { model | featureEditState = Editing override (DraftValue override.feature) (OriginalValue override.feature) }, Cmd.none )
 
-                ( Just override, Editing previousOverride draftValue _ ) ->
+                ( Just override, Editing previousOverride _ originalValue ) ->
                     ( { model
                         | featureEditState = Editing override (DraftValue override.feature) (OriginalValue override.feature)
-                        , overrides = replace previousOverride { previousOverride | feature = getDraftValue draftValue } model.overrides
+                        , overrides = replace previousOverride { previousOverride | feature = getOriginalValue originalValue } model.overrides
                       }
                     , Cmd.none
                     )
