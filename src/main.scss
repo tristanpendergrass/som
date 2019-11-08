@@ -4,3 +4,11 @@ body {
   width: 580px;
   height: 580px;
 }
+
+ul.overrides {
+  list-style-type: none;
+  padding-inline-start: 0;
+}
+.variant-input {
+  display: inline-block;
+}

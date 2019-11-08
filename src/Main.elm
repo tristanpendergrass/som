@@ -2,8 +2,8 @@ port module Main exposing (main)
 
 import Browser
 import Html exposing (Html, button, div, form, input, li, span, text, ul)
-import Html.Attributes exposing (type_, value)
-import Html.Events exposing (onClick, onInput, onSubmit)
+import Html.Attributes exposing (checked, class, required, type_, value)
+import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
 import Json.Decode as D
 import Json.Encode as E
 import List
@@ -36,6 +36,7 @@ type alias Override =
     { id : Id
     , feature : Feature
     , variantSelection : Maybe Variant
+    , active : Bool
     }
 
 
@@ -69,10 +70,11 @@ init ( initialBrowserUrl, localStorageData ) =
 
         overrideDecoder : D.Decoder Override
         overrideDecoder =
-            D.map3 Override
+            D.map4 Override
                 (D.field "id" D.int)
                 (D.field "feature" D.string)
                 (D.field "variantSelection" (D.map stringToVariantSelection D.string))
+                (D.field "active" D.bool)
 
         overrides : List Override
         overrides =
@@ -106,11 +108,12 @@ encodeModel : Model -> E.Value
 encodeModel model =
     let
         overrideToJson : Override -> E.Value
-        overrideToJson { id, feature, variantSelection } =
+        overrideToJson { id, feature, variantSelection, active } =
             E.object
                 [ ( "id", E.int id )
                 , ( "feature", E.string feature )
                 , ( "variantSelection", E.string <| Maybe.withDefault "" variantSelection )
+                , ( "active", E.bool active )
                 ]
     in
     E.object
@@ -128,18 +131,19 @@ applyOverridesToUrl overrides oldUrl =
 
         newParams : List QueryParams.QueryParam
         newParams =
-            List.foldl
-                (\override ->
-                    \accumulator ->
-                        case override.variantSelection of
-                            Nothing ->
-                                accumulator
+            overrides
+                |> List.filter .active
+                |> List.foldl
+                    (\override ->
+                        \accumulator ->
+                            case override.variantSelection of
+                                Nothing ->
+                                    accumulator
 
-                            Just variant ->
-                                QueryParams.applyOverride override.feature variant accumulator
-                )
-                oldParams
-                overrides
+                                Just variant ->
+                                    QueryParams.applyOverride override.feature variant accumulator
+                    )
+                    oldParams
 
         newUrl : Url
         newUrl =
@@ -162,11 +166,13 @@ replace oldA newA =
 
 type Msg
     = SetBrowserUrl String
-    | HandleVariantSelectionInput Override String
     | ApplyOverrides
       -- Add Override
     | HandleAddOverrideFeatureInput String
     | HandleAddOverrideSubmit
+      -- Edit Override
+    | HandleVariantSelectionInput Override String
+    | HandleOverrideActiveInput Override Bool
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -218,7 +224,7 @@ update msg model =
             let
                 newOverride : Override
                 newOverride =
-                    Override model.nonce model.feature Nothing
+                    Override model.nonce model.feature Nothing True
 
                 newOverrides : List Override
                 newOverrides =
@@ -228,7 +234,23 @@ update msg model =
                 newModel =
                     { model | nonce = model.nonce + 1, overrides = newOverrides, feature = "" }
             in
-            ( newModel, sendToLocalStorage <| encodeModel model )
+            ( newModel, sendToLocalStorage <| encodeModel newModel )
+
+        HandleOverrideActiveInput override active ->
+            let
+                newOverride : Override
+                newOverride =
+                    { override | active = active }
+
+                newOverrides : List Override
+                newOverrides =
+                    replace override newOverride model.overrides
+
+                newModel : Model
+                newModel =
+                    { model | overrides = newOverrides }
+            in
+            ( newModel, sendToLocalStorage <| encodeModel newModel )
 
 
 
@@ -265,8 +287,9 @@ renderOverride override =
             override.variantSelection |> Maybe.withDefault ""
     in
     li []
-        [ span [] [ text override.feature ]
-        , form [ onSubmit ApplyOverrides ]
+        [ input [ type_ "checkbox", checked override.active, onCheck (HandleOverrideActiveInput override) ] []
+        , span [] [ text override.feature ]
+        , form [ class "variant-input", onSubmit ApplyOverrides ]
             [ input [ value variantValue, onInput (HandleVariantSelectionInput override) ] []
             ]
         ]
@@ -275,10 +298,9 @@ renderOverride override =
 view : Model -> Html Msg
 view model =
     div []
-        [ ul []
+        [ ul [ class "overrides" ]
             (renderAddOverride model
                 :: List.map renderOverride model.overrides
             )
         , button [ onClick ApplyOverrides ] [ text "Apply Overrides" ]
-        , div [] [ text ("nonce:" ++ String.fromInt model.nonce) ]
         ]
