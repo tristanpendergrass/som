@@ -2,8 +2,8 @@ port module Main exposing (main)
 
 import Browser
 import Html exposing (Html, button, div, form, input, li, span, text, ul)
-import Html.Attributes exposing (checked, class, required, type_, value)
-import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
+import Html.Attributes exposing (checked, class, type_, value)
+import Html.Events exposing (onBlur, onCheck, onClick, onInput, onSubmit)
 import Json.Decode as D
 import Json.Encode as E
 import List
@@ -14,6 +14,16 @@ import Url exposing (Url)
 main : Program ( String, D.Value ) Model Msg
 main =
     Browser.element { init = init, update = update, view = view, subscriptions = subscriptions }
+
+
+getDraftValue : DraftValue -> String
+getDraftValue (DraftValue value) =
+    value
+
+
+getOriginalValue : OriginalValue -> String
+getOriginalValue (OriginalValue value) =
+    value
 
 
 
@@ -40,11 +50,25 @@ type alias Override =
     }
 
 
+type DraftValue
+    = DraftValue String
+
+
+type OriginalValue
+    = OriginalValue String
+
+
+type FeatureEditState
+    = Editing Override DraftValue OriginalValue
+    | NotEditing
+
+
 type alias Model =
     { nonce : Int
     , browserUrl : Maybe Url
     , overrides : List Override
     , feature : String
+    , featureEditState : FeatureEditState
     }
 
 
@@ -89,6 +113,7 @@ init ( initialBrowserUrl, localStorageData ) =
       , browserUrl = Url.fromString initialBrowserUrl
       , overrides = overrides
       , feature = ""
+      , featureEditState = NotEditing
       }
     , Cmd.none
     )
@@ -173,6 +198,9 @@ type Msg
       -- Edit Override
     | HandleVariantSelectionInput Override String
     | HandleOverrideActiveInput Override Bool
+    | SetFeatureEdit (Maybe Override)
+    | HandleFeatureDraftInput String
+    | CancelFeatureEdit
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -252,6 +280,46 @@ update msg model =
             in
             ( newModel, sendToLocalStorage <| encodeModel newModel )
 
+        SetFeatureEdit maybeOverride ->
+            case ( maybeOverride, model.featureEditState ) of
+                ( Nothing, NotEditing ) ->
+                    ( model, Cmd.none )
+
+                ( Nothing, Editing previousOverride draftValue _ ) ->
+                    ( { model
+                        | featureEditState = NotEditing
+                        , overrides = replace previousOverride { previousOverride | feature = getDraftValue draftValue } model.overrides
+                      }
+                    , Cmd.none
+                    )
+
+                ( Just override, NotEditing ) ->
+                    ( { model | featureEditState = Editing override (DraftValue override.feature) (OriginalValue override.feature) }, Cmd.none )
+
+                ( Just override, Editing previousOverride draftValue _ ) ->
+                    ( { model
+                        | featureEditState = Editing override (DraftValue override.feature) (OriginalValue override.feature)
+                        , overrides = replace previousOverride { previousOverride | feature = getDraftValue draftValue } model.overrides
+                      }
+                    , Cmd.none
+                    )
+
+        HandleFeatureDraftInput value ->
+            case model.featureEditState of
+                NotEditing ->
+                    ( model, Cmd.none )
+
+                Editing override _ originalValue ->
+                    ( { model | featureEditState = Editing override (DraftValue value) originalValue }, Cmd.none )
+
+        CancelFeatureEdit ->
+            case model.featureEditState of
+                NotEditing ->
+                    ( model, Cmd.none )
+
+                Editing override _ originalValue ->
+                    ( { model | featureEditState = NotEditing, overrides = replace override { override | feature = getOriginalValue originalValue } model.overrides }, Cmd.none )
+
 
 
 -- SUBSCRIPTIONS
@@ -279,19 +347,57 @@ renderAddOverride model =
         ]
 
 
-renderOverride : Override -> Html Msg
-renderOverride override =
+renderOverride : FeatureEditState -> Override -> Html Msg
+renderOverride featureEditState override =
     let
         variantValue : String
         variantValue =
             override.variantSelection |> Maybe.withDefault ""
+
+        featureText : Html Msg
+        featureText =
+            span [] [ text override.feature ]
+
+        featureTextOrInput : Html Msg
+        featureTextOrInput =
+            case featureEditState of
+                NotEditing ->
+                    featureText
+
+                Editing editingOverride draftValue _ ->
+                    if editingOverride == override then
+                        input
+                            [ value (getDraftValue draftValue)
+                            , onInput HandleFeatureDraftInput
+                            ]
+                            []
+
+                    else
+                        featureText
+
+        featureButton : Html Msg
+        featureButton =
+            case featureEditState of
+                NotEditing ->
+                    button [ onClick (SetFeatureEdit (Just override)) ] [ text "Edit" ]
+
+                Editing editingOverride _ _ ->
+                    if editingOverride == override then
+                        span []
+                            [ button [ onClick CancelFeatureEdit ] [ text "Cancel" ]
+                            , button [ onClick (SetFeatureEdit Nothing) ] [ text "Confirm" ]
+                            ]
+
+                    else
+                        button [ onClick (SetFeatureEdit (Just override)) ] [ text "Edit" ]
     in
     li []
-        [ input [ type_ "checkbox", checked override.active, onCheck (HandleOverrideActiveInput override) ] []
-        , span [] [ text override.feature ]
+        [ featureButton
+        , featureTextOrInput
         , form [ class "variant-input", onSubmit ApplyOverrides ]
             [ input [ value variantValue, onInput (HandleVariantSelectionInput override) ] []
             ]
+        , input [ type_ "checkbox", checked override.active, onCheck (HandleOverrideActiveInput override) ] []
         ]
 
 
@@ -300,7 +406,7 @@ view model =
     div []
         [ ul [ class "overrides" ]
             (renderAddOverride model
-                :: List.map renderOverride model.overrides
+                :: List.map (renderOverride model.featureEditState) model.overrides
             )
         , button [ onClick ApplyOverrides ] [ text "Apply Overrides" ]
         ]
