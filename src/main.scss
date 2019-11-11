@@ -8,7 +8,11 @@ body {
 ul.overrides {
   list-style-type: none;
   padding-inline-start: 0;
+  margin: 0;
 }
 .variant-input {
   display: inline-block;
+}
+.feature-filter {
+  width: 50%;
 }

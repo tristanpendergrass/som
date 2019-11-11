@@ -2,7 +2,7 @@ port module Main exposing (main)
 
 import Browser
 import Html exposing (Html, button, div, form, input, li, span, text, ul)
-import Html.Attributes exposing (checked, class, type_, value)
+import Html.Attributes exposing (checked, class, placeholder, type_, value)
 import Html.Events exposing (onBlur, onCheck, onClick, onInput, onSubmit)
 import Json.Decode as D
 import Json.Encode as E
@@ -14,6 +14,13 @@ import Url exposing (Url)
 main : Program ( String, D.Value ) Model Msg
 main =
     Browser.element { init = init, update = update, view = view, subscriptions = subscriptions }
+
+
+{-| Used to filter features by the input of the user
+-}
+matchString : String -> String -> Bool
+matchString left right =
+    String.contains (String.toLower left) (String.toLower right)
 
 
 getDraftValue : DraftValue -> String
@@ -69,6 +76,7 @@ type alias Model =
     , overrides : List Override
     , feature : String
     , featureEditState : FeatureEditState
+    , featureFilter : String
     }
 
 
@@ -114,6 +122,7 @@ init ( initialBrowserUrl, localStorageData ) =
       , overrides = overrides
       , feature = ""
       , featureEditState = NotEditing
+      , featureFilter = ""
       }
     , Cmd.none
     )
@@ -191,6 +200,7 @@ replace oldA newA =
 
 type Msg
     = SetBrowserUrl String
+    | HandleFeatureFilterInput String
     | ApplyOverrides
       -- Add Override
     | HandleAddOverrideFeatureInput String
@@ -320,6 +330,9 @@ update msg model =
                 Editing override _ originalValue ->
                     ( { model | featureEditState = NotEditing, overrides = replace override { override | feature = getOriginalValue originalValue } model.overrides }, Cmd.none )
 
+        HandleFeatureFilterInput value ->
+            ( { model | featureFilter = value }, Cmd.none )
+
 
 
 -- SUBSCRIPTIONS
@@ -401,12 +414,27 @@ renderOverride featureEditState override =
         ]
 
 
+renderFeatureFilter : Model -> Html Msg
+renderFeatureFilter model =
+    input
+        [ class "feature-filter"
+        , onInput HandleFeatureFilterInput
+        , value model.featureFilter
+        , placeholder "Filter by feature name"
+        ]
+        []
+
+
 view : Model -> Html Msg
 view model =
     div []
-        [ ul [ class "overrides" ]
+        [ renderFeatureFilter model
+        , ul [ class "overrides" ]
             (renderAddOverride model
-                :: List.map (renderOverride model.featureEditState) model.overrides
+                :: (model.overrides
+                        |> List.filter (.feature >> matchString model.featureFilter)
+                        |> List.map (renderOverride model.featureEditState)
+                   )
             )
         , button [ onClick ApplyOverrides ] [ text "Apply Overrides" ]
         ]
