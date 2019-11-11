@@ -16,3 +16,18 @@ ul.overrides {
 .feature-filter {
   width: 50%;
 }
+.tab-container {
+  .tab {
+    display: inline-block;
+    border: 1px solid black;
+
+    &:hover {
+      cursor: pointer;
+    }
+
+    &.active {
+      background-color: black;
+      color: white;
+    }
+  }
+}

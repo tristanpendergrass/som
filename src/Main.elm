@@ -2,8 +2,8 @@ port module Main exposing (main)
 
 import Browser
 import Html exposing (Html, button, div, form, input, li, span, text, ul)
-import Html.Attributes exposing (checked, class, placeholder, type_, value)
-import Html.Events exposing (onBlur, onCheck, onClick, onInput, onSubmit)
+import Html.Attributes exposing (checked, class, classList, placeholder, type_, value)
+import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
 import Json.Decode as D
 import Json.Encode as E
 import List
@@ -70,6 +70,11 @@ type FeatureEditState
     | NotEditing
 
 
+type ActiveTab
+    = Main
+    | Archive
+
+
 type alias Model =
     { nonce : Int
     , browserUrl : Maybe Url
@@ -77,6 +82,7 @@ type alias Model =
     , feature : String
     , featureEditState : FeatureEditState
     , featureFilter : String
+    , activeTab : ActiveTab
     }
 
 
@@ -123,6 +129,7 @@ init ( initialBrowserUrl, localStorageData ) =
       , feature = ""
       , featureEditState = NotEditing
       , featureFilter = ""
+      , activeTab = Main
       }
     , Cmd.none
     )
@@ -202,6 +209,7 @@ type Msg
     = SetBrowserUrl String
     | HandleFeatureFilterInput String
     | ApplyOverrides
+    | SetActiveTab ActiveTab
       -- Add Override
     | HandleAddOverrideFeatureInput String
     | HandleAddOverrideSubmit
@@ -254,6 +262,9 @@ update msg model =
                             applyOverridesToUrl model.overrides oldUrl
                     in
                     ( model, sendUrl <| Url.toString newUrl )
+
+        SetActiveTab activeTab ->
+            ( { model | activeTab = activeTab }, Cmd.none )
 
         HandleAddOverrideFeatureInput feature ->
             ( { model | feature = feature }, Cmd.none )
@@ -425,16 +436,43 @@ renderFeatureFilter model =
         []
 
 
+renderTabs : Model -> Html Msg
+renderTabs model =
+    div [ class "tab-container" ]
+        [ div
+            [ class "tab"
+            , classList [ ( "active", model.activeTab == Main ) ]
+            , onClick (SetActiveTab Main)
+            ]
+            [ text "Main" ]
+        , div
+            [ class "tab"
+            , classList [ ( "active", model.activeTab == Archive ) ]
+            , onClick (SetActiveTab Archive)
+            ]
+            [ text "Archive" ]
+        ]
+
+
 view : Model -> Html Msg
 view model =
-    div []
-        [ renderFeatureFilter model
-        , ul [ class "overrides" ]
-            (renderAddOverride model
-                :: (model.overrides
-                        |> List.filter (.feature >> matchString model.featureFilter)
-                        |> List.map (renderOverride model.featureEditState)
-                   )
-            )
-        , button [ onClick ApplyOverrides ] [ text "Apply Overrides" ]
-        ]
+    case model.activeTab of
+        Main ->
+            div []
+                [ renderTabs model
+                , renderFeatureFilter model
+                , ul [ class "overrides" ]
+                    (renderAddOverride model
+                        :: (model.overrides
+                                |> List.filter (.feature >> matchString model.featureFilter)
+                                |> List.map (renderOverride model.featureEditState)
+                           )
+                    )
+                , button [ onClick ApplyOverrides ] [ text "Apply Overrides" ]
+                ]
+
+        Archive ->
+            div []
+                [ renderTabs model
+                , div [] [ text "In Progress..." ]
+                ]
