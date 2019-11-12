@@ -10,10 +10,10 @@ chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
 
   app.ports.sendUrl.subscribe(url => {
     chrome.tabs.update(tab.id, { url });
+    window.close();
   });
 
   app.ports.sendToLocalStorage.subscribe(data => {
-    console.log({ data });
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
   });
 });
