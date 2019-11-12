@@ -71,14 +71,15 @@ type FeatureEditState
 
 
 type ActiveTab
-    = Main
-    | Archive
+    = MainTab
+    | ArchiveTab
 
 
 type alias Model =
     { nonce : Int
     , browserUrl : Maybe Url
     , overrides : List Override
+    , archivedOverrides : List Override
     , feature : String
     , featureEditState : FeatureEditState
     , featureFilter : String
@@ -122,14 +123,24 @@ init ( initialBrowserUrl, localStorageData ) =
 
                 Err _ ->
                     []
+
+        archivedOverrides : List Override
+        archivedOverrides =
+            case D.decodeValue (D.field "archivedOverrides" (D.list overrideDecoder)) localStorageData of
+                Ok val ->
+                    val
+
+                Err _ ->
+                    []
     in
     ( { nonce = nonce
       , browserUrl = Url.fromString initialBrowserUrl
       , overrides = overrides
+      , archivedOverrides = archivedOverrides
       , feature = ""
       , featureEditState = NotEditing
       , featureFilter = ""
-      , activeTab = Main
+      , activeTab = MainTab
       }
     , Cmd.none
     )
@@ -160,6 +171,7 @@ encodeModel model =
     E.object
         [ ( "nonce", E.int model.nonce )
         , ( "overrides", E.list overrideToJson model.overrides )
+        , ( "archivedOverrides", E.list overrideToJson model.archivedOverrides )
         ]
 
 
@@ -219,6 +231,7 @@ type Msg
     | SetFeatureEdit (Maybe Override)
     | HandleFeatureDraftInput String
     | CancelFeatureEdit
+    | Archive Override
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -339,10 +352,26 @@ update msg model =
                     ( model, Cmd.none )
 
                 Editing override _ originalValue ->
-                    ( { model | featureEditState = NotEditing, overrides = replace override { override | feature = getOriginalValue originalValue } model.overrides }, Cmd.none )
+                    ( { model
+                        | featureEditState = NotEditing
+                        , overrides = replace override { override | feature = getOriginalValue originalValue } model.overrides
+                      }
+                    , Cmd.none
+                    )
 
         HandleFeatureFilterInput value ->
             ( { model | featureFilter = value }, Cmd.none )
+
+        Archive override ->
+            let
+                newModel : Model
+                newModel =
+                    { model
+                        | overrides = model.overrides |> List.filter ((/=) override)
+                        , archivedOverrides = override :: model.archivedOverrides
+                    }
+            in
+            ( newModel, sendToLocalStorage <| encodeModel newModel )
 
 
 
@@ -382,8 +411,8 @@ renderOverride featureEditState override =
         featureText =
             span [] [ text override.feature ]
 
-        featureTextOrInput : Html Msg
-        featureTextOrInput =
+        labelOrInput : Html Msg
+        labelOrInput =
             case featureEditState of
                 NotEditing ->
                     featureText
@@ -399,8 +428,8 @@ renderOverride featureEditState override =
                     else
                         featureText
 
-        featureButton : Html Msg
-        featureButton =
+        editOrCancelButton : Html Msg
+        editOrCancelButton =
             case featureEditState of
                 NotEditing ->
                     button [ onClick (SetFeatureEdit (Just override)) ] [ text "Edit" ]
@@ -416,12 +445,13 @@ renderOverride featureEditState override =
                         button [ onClick (SetFeatureEdit (Just override)) ] [ text "Edit" ]
     in
     li []
-        [ featureButton
-        , featureTextOrInput
+        [ editOrCancelButton
+        , labelOrInput
         , form [ class "variant-input", onSubmit ApplyOverrides ]
             [ input [ value variantValue, onInput (HandleVariantSelectionInput override) ] []
             ]
         , input [ type_ "checkbox", checked override.active, onCheck (HandleOverrideActiveInput override) ] []
+        , button [ onClick (Archive override) ] [ text "Archive" ]
         ]
 
 
@@ -441,14 +471,14 @@ renderTabs model =
     div [ class "tab-container" ]
         [ div
             [ class "tab"
-            , classList [ ( "active", model.activeTab == Main ) ]
-            , onClick (SetActiveTab Main)
+            , classList [ ( "active", model.activeTab == MainTab ) ]
+            , onClick (SetActiveTab MainTab)
             ]
             [ text "Main" ]
         , div
             [ class "tab"
-            , classList [ ( "active", model.activeTab == Archive ) ]
-            , onClick (SetActiveTab Archive)
+            , classList [ ( "active", model.activeTab == ArchiveTab ) ]
+            , onClick (SetActiveTab ArchiveTab)
             ]
             [ text "Archive" ]
         ]
@@ -457,7 +487,7 @@ renderTabs model =
 view : Model -> Html Msg
 view model =
     case model.activeTab of
-        Main ->
+        MainTab ->
             div []
                 [ renderTabs model
                 , renderFeatureFilter model
@@ -471,8 +501,11 @@ view model =
                 , button [ onClick ApplyOverrides ] [ text "Apply Overrides" ]
                 ]
 
-        Archive ->
+        ArchiveTab ->
             div []
                 [ renderTabs model
-                , div [] [ text "In Progress..." ]
+                , div []
+                    (model.archivedOverrides
+                        |> List.map (\override -> div [] [ text override.feature ])
+                    )
                 ]
