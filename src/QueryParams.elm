@@ -1,4 +1,4 @@
-module QueryParams exposing (QueryParam(..), applyOverride, fromUrl, toString)
+module QueryParams exposing (QueryParam, applyOverride, fromUrl, toString)
 
 import Regex
 import Url exposing (Url)
