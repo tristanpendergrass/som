@@ -1,6 +1,7 @@
 port module Main exposing (main)
 
 import Browser
+import FeatherIcons
 import Html exposing (Html, button, div, form, h2, input, li, span, text, ul)
 import Html.Attributes exposing (checked, class, classList, disabled, placeholder, type_, value)
 import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
@@ -417,7 +418,11 @@ renderAddOverride : Model -> Html Msg
 renderAddOverride model =
     li []
         [ form [ onSubmit HandleAddOverrideSubmit ]
-            [ button [ type_ "submit", disabled (model.feature == "") ] [ text "+" ]
+            [ button [ type_ "submit", disabled (model.feature == "") ]
+                [ FeatherIcons.plus
+                    |> FeatherIcons.withSize 12
+                    |> FeatherIcons.toHtml []
+                ]
             , input [ value model.feature, onInput HandleAddOverrideFeatureInput, placeholder "New Feature Name" ] []
             ]
         ]
@@ -455,13 +460,25 @@ renderOverride featureEditState override =
         editOrCancelButton =
             case featureEditState of
                 NotEditing ->
-                    button [ onClick (SetFeatureEdit (Just override)) ] [ text "Edit" ]
+                    button [ onClick (SetFeatureEdit (Just override)) ]
+                        [ FeatherIcons.edit2
+                            |> FeatherIcons.withSize 12
+                            |> FeatherIcons.toHtml []
+                        ]
 
                 Editing editingOverride _ _ ->
                     if editingOverride == override then
                         span []
-                            [ button [ onClick CancelFeatureEdit ] [ text "Cancel" ]
-                            , button [ onClick (SetFeatureEdit Nothing) ] [ text "Confirm" ]
+                            [ button [ onClick CancelFeatureEdit ]
+                                [ FeatherIcons.slash
+                                    |> FeatherIcons.withSize 12
+                                    |> FeatherIcons.toHtml []
+                                ]
+                            , button [ onClick (SetFeatureEdit Nothing) ]
+                                [ FeatherIcons.checkCircle
+                                    |> FeatherIcons.withSize 12
+                                    |> FeatherIcons.toHtml []
+                                ]
                             ]
 
                     else
@@ -474,7 +491,11 @@ renderOverride featureEditState override =
             [ input [ value variantValue, onInput (HandleVariantSelectionInput override) ] []
             ]
         , input [ type_ "checkbox", checked override.active, onCheck (HandleOverrideActiveInput override) ] []
-        , button [ onClick (Archive override) ] [ text "Archive" ]
+        , button [ onClick (Archive override) ]
+            [ FeatherIcons.archive
+                |> FeatherIcons.withSize 12
+                |> FeatherIcons.toHtml []
+            ]
         ]
 
 
@@ -514,7 +535,11 @@ renderArchivedOverride : Override -> Html Msg
 renderArchivedOverride override =
     li []
         [ button [ onClick (Unarchive override) ] [ text "Unarchive" ]
-        , button [ onClick (Delete override) ] [ text "Permanently Delete" ]
+        , button [ onClick (Delete override) ]
+            [ FeatherIcons.trash
+                |> FeatherIcons.withSize 12
+                |> FeatherIcons.toHtml []
+            ]
         , span [] [ text override.feature ]
         ]
 
