@@ -1,7 +1,7 @@
 port module Main exposing (main)
 
 import Browser
-import Html exposing (Html, button, div, form, input, li, span, text, ul)
+import Html exposing (Html, button, div, form, h2, input, li, span, text, ul)
 import Html.Attributes exposing (checked, class, classList, disabled, placeholder, type_, value)
 import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
 import Json.Decode as D
@@ -491,19 +491,22 @@ renderFeatureFilter model =
 
 renderTabs : Model -> Html Msg
 renderTabs model =
-    div [ class "tab-container" ]
+    div [ class "tab-row" ]
         [ div
-            [ class "tab"
-            , classList [ ( "active", model.activeTab == MainTab ) ]
-            , onClick (SetActiveTab MainTab)
+            [ class "tab-container" ]
+            [ h2
+                [ class "tab"
+                , classList [ ( "active", model.activeTab == MainTab ) ]
+                , onClick (SetActiveTab MainTab)
+                ]
+                [ text "Main" ]
+            , h2
+                [ class "tab"
+                , classList [ ( "active", model.activeTab == ArchiveTab ) ]
+                , onClick (SetActiveTab ArchiveTab)
+                ]
+                [ text "Archive" ]
             ]
-            [ text "Main" ]
-        , div
-            [ class "tab"
-            , classList [ ( "active", model.activeTab == ArchiveTab ) ]
-            , onClick (SetActiveTab ArchiveTab)
-            ]
-            [ text "Archive" ]
         ]
 
 
