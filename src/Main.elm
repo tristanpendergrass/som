@@ -2,7 +2,7 @@ port module Main exposing (main)
 
 import Browser
 import Html exposing (Html, button, div, form, input, li, span, text, ul)
-import Html.Attributes exposing (checked, class, classList, placeholder, type_, value)
+import Html.Attributes exposing (checked, class, classList, disabled, placeholder, type_, value)
 import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
 import Json.Decode as D
 import Json.Encode as E
@@ -417,8 +417,8 @@ renderAddOverride : Model -> Html Msg
 renderAddOverride model =
     li []
         [ form [ onSubmit HandleAddOverrideSubmit ]
-            [ button [ type_ "submit" ] [ text "+" ]
-            , input [ value model.feature, onInput HandleAddOverrideFeatureInput ] []
+            [ button [ type_ "submit", disabled (model.feature == "") ] [ text "+" ]
+            , input [ value model.feature, onInput HandleAddOverrideFeatureInput, placeholder "New Feature Name" ] []
             ]
         ]
 
@@ -530,7 +530,11 @@ view model =
                                 |> List.map (renderOverride model.featureEditState)
                            )
                     )
-                , button [ onClick ApplyOverrides ] [ text "Apply Overrides" ]
+                , button
+                    [ onClick ApplyOverrides
+                    , disabled <| not <| List.any .active model.overrides
+                    ]
+                    [ text "Apply Overrides" ]
                 ]
 
         ArchiveTab ->
