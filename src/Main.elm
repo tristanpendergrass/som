@@ -232,6 +232,8 @@ type Msg
     | HandleFeatureDraftInput String
     | CancelFeatureEdit
     | Archive Override
+    | Unarchive Override
+    | Delete Override
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -373,6 +375,27 @@ update msg model =
             in
             ( newModel, sendToLocalStorage <| encodeModel newModel )
 
+        Unarchive override ->
+            let
+                newModel : Model
+                newModel =
+                    { model
+                        | overrides = override :: model.overrides
+                        , archivedOverrides = model.archivedOverrides |> List.filter ((/=) override)
+                    }
+            in
+            ( newModel, sendToLocalStorage <| encodeModel newModel )
+
+        Delete override ->
+            let
+                newModel : Model
+                newModel =
+                    { model
+                        | archivedOverrides = model.archivedOverrides |> List.filter ((/=) override)
+                    }
+            in
+            ( newModel, sendToLocalStorage <| encodeModel newModel )
+
 
 
 -- SUBSCRIPTIONS
@@ -484,6 +507,15 @@ renderTabs model =
         ]
 
 
+renderArchivedOverride : Override -> Html Msg
+renderArchivedOverride override =
+    li []
+        [ button [ onClick (Unarchive override) ] [ text "Unarchive" ]
+        , button [ onClick (Delete override) ] [ text "Permanently Delete" ]
+        , span [] [ text override.feature ]
+        ]
+
+
 view : Model -> Html Msg
 view model =
     case model.activeTab of
@@ -504,8 +536,8 @@ view model =
         ArchiveTab ->
             div []
                 [ renderTabs model
-                , div []
+                , ul []
                     (model.archivedOverrides
-                        |> List.map (\override -> div [] [ text override.feature ])
+                        |> List.map renderArchivedOverride
                     )
                 ]
