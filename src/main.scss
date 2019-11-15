@@ -1,3 +1,5 @@
+$PRIMARY:  #0D2481;
+
 body {
   margin: 0;
   padding: 10px;
@@ -26,7 +28,7 @@ ul.overrides {
     display: inline-block;
     margin: 0 10px 0 0;
     font-size: 16px;
-    color: lighten(black, 50%);
+    color: lighten($PRIMARY, 30%);
     text-transform: uppercase;
     font-weight: normal;
 
@@ -37,7 +39,7 @@ ul.overrides {
 
     &.active {
       text-decoration: underline;
-      color: black;
+      color: $PRIMARY;
       font-weight: bold;
     }
 
@@ -46,4 +48,10 @@ ul.overrides {
     }
 
   }
+}
+.header-title {
+  margin-top: 0;
+  text-align: center;
+  border-bottom: 1px solid $PRIMARY;
+  color: $PRIMARY;
 }
