@@ -416,7 +416,7 @@ subscriptions _ =
 
 renderAddOverride : Model -> Html Msg
 renderAddOverride model =
-    li []
+    div []
         [ form [ onSubmit HandleAddOverrideSubmit ]
             [ button [ type_ "submit", disabled (model.feature == "") ]
                 [ FeatherIcons.plus
@@ -437,7 +437,7 @@ renderOverride featureEditState override =
 
         featureText : Html Msg
         featureText =
-            span [] [ text override.feature ]
+            span [ class "feature-name" ] [ text override.feature ]
 
         labelOrInput : Html Msg
         labelOrInput =
@@ -450,6 +450,7 @@ renderOverride featureEditState override =
                         input
                             [ value (getDraftValue draftValue)
                             , onInput HandleFeatureDraftInput
+                            , class "feature-name"
                             ]
                             []
 
@@ -484,13 +485,19 @@ renderOverride featureEditState override =
                     else
                         button [ onClick (SetFeatureEdit (Just override)) ] [ text "Edit" ]
     in
-    li []
+    div [ class "override" ]
         [ editOrCancelButton
         , labelOrInput
         , form [ class "variant-input", onSubmit ApplyOverrides ]
             [ input [ value variantValue, onInput (HandleVariantSelectionInput override) ] []
             ]
-        , input [ type_ "checkbox", checked override.active, onCheck (HandleOverrideActiveInput override) ] []
+        , input
+            [ class "toggle-active"
+            , type_ "checkbox"
+            , checked override.active
+            , onCheck (HandleOverrideActiveInput override)
+            ]
+            []
         , button [ onClick (Archive override) ]
             [ FeatherIcons.archive
                 |> FeatherIcons.withSize 12
@@ -533,7 +540,7 @@ renderTabs model =
 
 renderArchivedOverride : Override -> Html Msg
 renderArchivedOverride override =
-    li []
+    div []
         [ button [ onClick (Unarchive override) ] [ text "Unarchive" ]
         , button [ onClick (Delete override) ]
             [ FeatherIcons.trash
@@ -557,7 +564,7 @@ view model =
                 [ renderHeader
                 , renderTabs model
                 , renderFeatureFilter model
-                , ul [ class "overrides" ]
+                , div [ class "overrides" ]
                     (renderAddOverride model
                         :: (model.overrides
                                 |> List.filter (.feature >> matchString model.featureFilter)
@@ -575,7 +582,7 @@ view model =
             div []
                 [ renderHeader
                 , renderTabs model
-                , ul []
+                , div []
                     (model.archivedOverrides
                         |> List.map renderArchivedOverride
                     )
