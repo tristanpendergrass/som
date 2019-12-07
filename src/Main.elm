@@ -2,7 +2,7 @@ port module Main exposing (main)
 
 import Browser
 import FeatherIcons
-import Html exposing (Html, button, div, form, h1, h2, input, li, span, text, ul)
+import Html exposing (Html, button, div, form, h1, h2, input, span, text)
 import Html.Attributes exposing (checked, class, classList, disabled, placeholder, type_, value)
 import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
 import Json.Decode as D
