@@ -558,6 +558,18 @@ renderHeader =
 
 view : Model -> Html Msg
 view model =
+    let
+        overrideSorter : Override -> Override -> Order
+        overrideSorter left right =
+            if left.active == right.active then
+                EQ
+
+            else if left.active then
+                LT
+
+            else
+                GT
+    in
     case model.activeTab of
         MainTab ->
             div []
@@ -567,6 +579,7 @@ view model =
                 , div [ class "overrides" ]
                     (renderAddOverride model
                         :: (model.overrides
+                                |> List.sortWith overrideSorter
                                 |> List.filter (.feature >> matchString model.featureFilter)
                                 |> List.map (renderOverride model.featureEditState)
                            )
