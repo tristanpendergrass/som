@@ -6,7 +6,6 @@
     "sass": "^1.23.3"
   },
   "scripts": {
-    "start": "parcel src/index.html --out-dir temp",
     "build": "parcel build src/index.html --out-dir dist --public-url /dist/"
   }
 }
