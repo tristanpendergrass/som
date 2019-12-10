@@ -572,7 +572,7 @@ view : Model -> Html Msg
 view model =
     case model.activeTab of
         MainTab ->
-            div []
+            div [ class "tab-content main" ]
                 [ renderHeader
                 , renderTabs model
                 , renderFeatureFilter model
@@ -583,15 +583,18 @@ view model =
                                 |> List.map (renderOverride model.featureEditState)
                            )
                     )
-                , button
-                    [ onClick ApplyOverrides
-                    , disabled <| not <| List.any .active model.overrides
+                , div []
+                    [ button
+                        [ class "apply-button"
+                        , onClick ApplyOverrides
+                        , disabled <| not <| List.any .active model.overrides
+                        ]
+                        [ text "Apply Overrides" ]
                     ]
-                    [ text "Apply Overrides" ]
                 ]
 
         ArchiveTab ->
-            div []
+            div [ class "tab-content archive" ]
                 [ renderHeader
                 , renderTabs model
                 , div []

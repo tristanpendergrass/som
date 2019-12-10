@@ -1,11 +1,25 @@
 $SAPPHIRE: #0D2481;
+$HOVER-SAPPHIRE: #1b3398;
 
 body {
   margin: 0;
   padding: 10px;
   width: 580px;
   height: 580px;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Atlas Grotesk", "AtlasGrotesk", sans-serif;
+}
+
+.tab-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  &.main {
+    .overrides {
+      flex-grow: 1;
+      overflow-y: auto;
+    }
+  }
 }
 
 .override {
@@ -35,6 +49,23 @@ body {
 
   }
 }
+
+
+.apply-button {
+  margin: 10px 0;
+  background-color: $SAPPHIRE;
+  color: white;
+  padding: 9px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  -webkit-font-smoothing: antialiased;
+  &:hover {
+    background-color: $HOVER-SAPPHIRE;
+    cursor: pointer;
+  }
+}
+
 .feature-filter {
   width: 100%;
   border: none;
