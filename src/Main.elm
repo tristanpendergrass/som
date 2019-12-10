@@ -495,7 +495,11 @@ renderOverride featureEditState override =
                             ]
 
                     else
-                        button [ onClick (SetFeatureEdit (Just override)) ] [ text "Edit" ]
+                        button [ onClick (SetFeatureEdit (Just override)) ]
+                            [ FeatherIcons.edit2
+                                |> FeatherIcons.withSize 12
+                                |> FeatherIcons.toHtml []
+                            ]
     in
     div [ class "override" ]
         [ editOrCancelButton
