@@ -2,8 +2,8 @@ port module Main exposing (main)
 
 import Browser
 import FeatherIcons
-import Html exposing (Html, button, div, form, h1, h2, input, span, text)
-import Html.Attributes exposing (checked, class, classList, disabled, placeholder, type_, value)
+import Html exposing (Html, button, div, form, h1, h2, input, option, select, span, text)
+import Html.Attributes exposing (checked, class, classList, disabled, placeholder, selected, type_, value)
 import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
 import Json.Decode as D
 import Json.Encode as E
@@ -500,12 +500,22 @@ renderOverride featureEditState override =
                                 |> FeatherIcons.withSize 12
                                 |> FeatherIcons.toHtml []
                             ]
+
+        variantOption : String -> Html Msg
+        variantOption variant =
+            option [ value variant, selected (variantValue == variant) ] [ text variant ]
     in
     div [ class "override" ]
         [ editOrCancelButton
         , labelOrInput
         , form [ class "variant-input", onSubmit ApplyOverrides ]
-            [ input [ value variantValue, onInput (HandleVariantSelectionInput override) ] []
+            [ select [ onInput (HandleVariantSelectionInput override) ]
+                [ variantOption "OFF"
+                , variantOption "ON"
+                , variantOption "CONTROL"
+                , variantOption "V1"
+                , variantOption "V2"
+                ]
             ]
         , input
             [ class "toggle-active"
