@@ -3,8 +3,8 @@ port module Main exposing (main)
 import Browser
 import FeatherIcons
 import Html exposing (Html, button, div, form, h1, h2, input, option, select, span, text)
-import Html.Attributes exposing (checked, class, classList, disabled, placeholder, selected, type_, value)
-import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
+import Html.Attributes exposing (class, classList, disabled, placeholder, selected, type_, value)
+import Html.Events exposing (onClick, onInput, onSubmit)
 import Json.Decode as D
 import Json.Encode as E
 import List
@@ -54,7 +54,6 @@ type alias Override =
     { id : Id
     , feature : Feature
     , variantSelection : Maybe Variant
-    , active : Bool
     }
 
 
@@ -110,25 +109,24 @@ init ( initialBrowserUrl, localStorageData ) =
 
         overrideDecoder : D.Decoder Override
         overrideDecoder =
-            D.map4 Override
+            D.map3 Override
                 (D.field "id" D.int)
                 (D.field "feature" D.string)
                 (D.field "variantSelection" (D.map stringToVariantSelection D.string))
-                (D.field "active" D.bool)
 
         overrides : List Override
         overrides =
             let
                 overrideSorter : Override -> Override -> Order
                 overrideSorter left right =
-                    if left.active == right.active then
+                    if left.variantSelection == Nothing && right.variantSelection == Nothing then
                         EQ
 
-                    else if left.active then
-                        LT
+                    else if left.variantSelection == Nothing then
+                        GT
 
                     else
-                        GT
+                        LT
             in
             case D.decodeValue (D.field "overrides" (D.list overrideDecoder)) localStorageData of
                 Ok val ->
@@ -173,12 +171,11 @@ encodeModel : Model -> E.Value
 encodeModel model =
     let
         overrideToJson : Override -> E.Value
-        overrideToJson { id, feature, variantSelection, active } =
+        overrideToJson { id, feature, variantSelection } =
             E.object
                 [ ( "id", E.int id )
                 , ( "feature", E.string feature )
                 , ( "variantSelection", E.string <| Maybe.withDefault "" variantSelection )
-                , ( "active", E.bool active )
                 ]
     in
     E.object
@@ -198,7 +195,6 @@ applyOverridesToUrl overrides oldUrl =
         newParams : List QueryParams.QueryParam
         newParams =
             overrides
-                |> List.filter .active
                 |> List.foldl
                     (\override ->
                         \accumulator ->
@@ -240,7 +236,6 @@ type Msg
     | HandleAddOverrideSubmit
       -- Edit Override
     | HandleVariantSelectionInput Override String
-    | HandleOverrideActiveInput Override Bool
     | SetFeatureEdit (Maybe Override)
     | HandleFeatureDraftInput String
     | CancelFeatureEdit
@@ -301,7 +296,7 @@ update msg model =
             let
                 newOverride : Override
                 newOverride =
-                    Override model.nonce model.feature Nothing True
+                    Override model.nonce model.feature (Just "ON")
 
                 newOverrides : List Override
                 newOverrides =
@@ -310,22 +305,6 @@ update msg model =
                 newModel : Model
                 newModel =
                     { model | nonce = model.nonce + 1, overrides = newOverrides, feature = "" }
-            in
-            ( newModel, sendToLocalStorage <| encodeModel newModel )
-
-        HandleOverrideActiveInput override active ->
-            let
-                newOverride : Override
-                newOverride =
-                    { override | active = active }
-
-                newOverrides : List Override
-                newOverrides =
-                    replace override newOverride model.overrides
-
-                newModel : Model
-                newModel =
-                    { model | overrides = newOverrides }
             in
             ( newModel, sendToLocalStorage <| encodeModel newModel )
 
@@ -510,20 +489,14 @@ renderOverride featureEditState override =
         , labelOrInput
         , form [ class "variant-input", onSubmit ApplyOverrides ]
             [ select [ onInput (HandleVariantSelectionInput override) ]
-                [ variantOption "OFF"
+                [ option [ value "", class "not-selected" ] [ text "Not Selected" ]
+                , variantOption "OFF"
                 , variantOption "ON"
                 , variantOption "CONTROL"
                 , variantOption "V1"
                 , variantOption "V2"
                 ]
             ]
-        , input
-            [ class "toggle-active"
-            , type_ "checkbox"
-            , checked override.active
-            , onCheck (HandleOverrideActiveInput override)
-            ]
-            []
         , button [ onClick (Archive override) ]
             [ FeatherIcons.archive
                 |> FeatherIcons.withSize 12
@@ -601,7 +574,7 @@ view model =
                     [ button
                         [ class "apply-button"
                         , onClick ApplyOverrides
-                        , disabled <| not <| List.any .active model.overrides
+                        , disabled <| not <| List.any (\override -> override.variantSelection /= Nothing) model.overrides
                         ]
                         [ text "Apply Overrides" ]
                     ]
