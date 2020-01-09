@@ -1,5 +1,8 @@
 $SAPPHIRE: #0D2481;
 $HOVER-SAPPHIRE: #1b3398;
+$NOT-SELECTED: #CFCFC4;
+$ON: #77DD77;
+$OFF: #FF6961;
 
 body {
   margin: 0;
@@ -26,7 +29,24 @@ body {
   display: flex;
   flex-direction: row;
   align-items: center;
-  margin: 10px 0;
+  margin: 0;
+  padding: 5px 0;
+  margin-bottom: 4px;
+
+  border-right-width: 5px;
+  border-right-style: solid;
+
+  &.not-selected {
+    border-right-color: $NOT-SELECTED;
+  }
+
+  &.on {
+    border-right-color: $ON;
+  }
+
+  &.off {
+    border-right-color: $OFF;
+  }
 
   .feature-name {
     flex-grow: 1;
@@ -49,7 +69,6 @@ body {
 
   }
 }
-
 
 .apply-button {
   margin: 10px 0;
