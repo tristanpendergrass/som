@@ -33,21 +33,6 @@ body {
   padding: 5px 0;
   margin-bottom: 4px;
 
-  border-right-width: 5px;
-  border-right-style: solid;
-
-  &.not-selected {
-    border-right-color: $NOT-SELECTED;
-  }
-
-  &.on {
-    border-right-color: $ON;
-  }
-
-  &.off {
-    border-right-color: $OFF;
-  }
-
   .feature-name {
     flex-grow: 1;
   }

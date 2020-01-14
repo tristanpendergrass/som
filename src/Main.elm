@@ -483,32 +483,8 @@ renderOverride featureEditState override =
         variantOption : String -> Html Msg
         variantOption variant =
             option [ value variant, selected (variantValue == variant) ] [ text variant ]
-
-        rowClassByType : String
-        rowClassByType =
-            case override.variantSelection of
-                Nothing ->
-                    "not-selected"
-
-                Just "OFF" ->
-                    "off"
-
-                Just "ON" ->
-                    "on"
-
-                Just "CONTROL" ->
-                    "off"
-
-                Just "V1" ->
-                    "on"
-
-                Just "V2" ->
-                    "on"
-
-                Just _ ->
-                    "off"
     in
-    div [ class "override", class rowClassByType ]
+    div [ class "override" ]
         [ editOrCancelButton
         , labelOrInput
         , form [ class "variant-input", onSubmit ApplyOverrides ]
