@@ -12,6 +12,10 @@ body {
   font-family: "Atlas Grotesk", "AtlasGrotesk", sans-serif;
 }
 
+.hidden {
+  display: none;
+}
+
 .tab-content {
   display: flex;
   flex-direction: column;

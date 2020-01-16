@@ -54,6 +54,7 @@ type alias Override =
     { id : Id
     , feature : Feature
     , variantSelection : Maybe Variant
+    , customVariantText : String
     }
 
 
@@ -109,10 +110,11 @@ init ( initialBrowserUrl, localStorageData ) =
 
         overrideDecoder : D.Decoder Override
         overrideDecoder =
-            D.map3 Override
+            D.map4 Override
                 (D.field "id" D.int)
                 (D.field "feature" D.string)
                 (D.field "variantSelection" (D.map stringToVariantSelection D.string))
+                (D.field "customVariantText" D.string)
 
         overrides : List Override
         overrides =
@@ -171,11 +173,12 @@ encodeModel : Model -> E.Value
 encodeModel model =
     let
         overrideToJson : Override -> E.Value
-        overrideToJson { id, feature, variantSelection } =
+        overrideToJson { id, feature, variantSelection, customVariantText } =
             E.object
                 [ ( "id", E.int id )
                 , ( "feature", E.string feature )
                 , ( "variantSelection", E.string <| Maybe.withDefault "" variantSelection )
+                , ( "customVariantText", E.string customVariantText )
                 ]
     in
     E.object
@@ -201,6 +204,9 @@ applyOverridesToUrl overrides oldUrl =
                             case override.variantSelection of
                                 Nothing ->
                                     accumulator
+
+                                Just "Custom" ->
+                                    QueryParams.applyOverride override.feature override.customVariantText accumulator
 
                                 Just variant ->
                                     QueryParams.applyOverride override.feature variant accumulator
@@ -236,6 +242,7 @@ type Msg
     | HandleAddOverrideSubmit
       -- Edit Override
     | HandleVariantSelectionInput Override String
+    | HandleCustomVariantInput Override String
     | SetFeatureEdit (Maybe Override)
     | HandleFeatureDraftInput String
     | CancelFeatureEdit
@@ -249,6 +256,24 @@ update msg model =
     case msg of
         SetBrowserUrl url ->
             ( { model | browserUrl = Url.fromString url }, Cmd.none )
+
+        HandleCustomVariantInput override text ->
+            let
+                newOverride : Override
+                newOverride =
+                    { override
+                        | customVariantText = text
+                    }
+
+                newOverrides : List Override
+                newOverrides =
+                    replace override newOverride model.overrides
+
+                newModel : Model
+                newModel =
+                    { model | overrides = newOverrides }
+            in
+            ( newModel, sendToLocalStorage <| encodeModel newModel )
 
         HandleVariantSelectionInput override selection ->
             let
@@ -296,7 +321,7 @@ update msg model =
             let
                 newOverride : Override
                 newOverride =
-                    Override model.nonce model.feature (Just "ON")
+                    Override model.nonce model.feature (Just "ON") ""
 
                 newOverrides : List Override
                 newOverrides =
@@ -483,19 +508,36 @@ renderOverride featureEditState override =
         variantOption : String -> Html Msg
         variantOption variant =
             option [ value variant, selected (variantValue == variant) ] [ text variant ]
+
+        customVariantInput : Html Msg
+        customVariantInput =
+            let
+                hideInput : Bool
+                hideInput =
+                    case override.variantSelection of
+                        Just variant ->
+                            variant /= "Custom"
+
+                        Nothing ->
+                            True
+            in
+            input
+                [ onInput (HandleCustomVariantInput override)
+                , value override.customVariantText
+                , classList [ ( "hidden", hideInput ) ]
+                ]
+                []
     in
     div [ class "override" ]
         [ editOrCancelButton
         , labelOrInput
-        , form [ class "variant-input", onSubmit ApplyOverrides ]
-            [ select [ onInput (HandleVariantSelectionInput override) ]
-                [ option [ value "" ] [ text "Not Selected" ]
-                , variantOption "OFF"
-                , variantOption "ON"
-                , variantOption "CONTROL"
-                , variantOption "V1"
-                , variantOption "V2"
-                ]
+        , customVariantInput
+        , select
+            [ onInput (HandleVariantSelectionInput override) ]
+            [ option [ value "" ] [ text "Not Selected" ]
+            , variantOption "OFF"
+            , variantOption "ON"
+            , variantOption "Custom"
             ]
         , button [ onClick (Archive override) ]
             [ FeatherIcons.archive
