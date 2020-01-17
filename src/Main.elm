@@ -612,11 +612,16 @@ view model =
                 [ renderHeader
                 , renderTabs model
                 , renderFeatureFilter model
-                , div [ class "overrides" ]
+                , div
+                    [ class "overrides" ]
                     (renderAddOverride model
-                        :: (model.overrides
-                                |> List.filter (.feature >> matchString model.featureFilter)
-                                |> List.map (renderOverride model.featureEditState)
+                        :: (if List.isEmpty model.overrides then
+                                [ div [ class "empty-overrides" ] [ text "No overrides exist." ] ]
+
+                            else
+                                model.overrides
+                                    |> List.filter (.feature >> matchString model.featureFilter)
+                                    |> List.map (renderOverride model.featureEditState)
                            )
                     )
                 , div []
