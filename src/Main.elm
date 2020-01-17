@@ -587,15 +587,15 @@ renderTabs model =
 
 renderArchivedOverride : Override -> Html Msg
 renderArchivedOverride override =
-    div []
+    div [ class "override" ]
         [ button [ onClick (Unarchive override) ] [ text "Unarchive" ]
+        , span [ class "archived-feature-name" ] [ text override.feature ]
         , button [ onClick (Delete override) ]
             [ FeatherIcons.trash2
                 |> FeatherIcons.withSize 12
                 |> FeatherIcons.withClass "feather-warn"
                 |> FeatherIcons.toHtml []
             ]
-        , span [] [ text override.feature ]
         ]
 
 

@@ -122,6 +122,10 @@ body {
   border-bottom: 1px solid black;
   color: black;
 }
+.archived-feature-name {
+  flex-grow: 1;
+}
+
 .empty-archive {
   width: 100%;
   height: 50px;
