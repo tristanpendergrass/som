@@ -437,6 +437,7 @@ renderAddOverride model =
             [ button [ type_ "submit", disabled (model.feature == "") ]
                 [ FeatherIcons.plus
                     |> FeatherIcons.withSize 12
+                    |> FeatherIcons.withClass "feather-action"
                     |> FeatherIcons.toHtml []
                 ]
             , input [ value model.feature, onInput HandleAddOverrideFeatureInput, placeholder "New Feature Name" ] []
@@ -480,6 +481,7 @@ renderOverride featureEditState override =
                     button [ onClick (SetFeatureEdit (Just override)) ]
                         [ FeatherIcons.edit2
                             |> FeatherIcons.withSize 12
+                            |> FeatherIcons.withClass "feather-action"
                             |> FeatherIcons.toHtml []
                         ]
 
@@ -489,11 +491,13 @@ renderOverride featureEditState override =
                             [ button [ onClick CancelFeatureEdit ]
                                 [ FeatherIcons.slash
                                     |> FeatherIcons.withSize 12
+                                    |> FeatherIcons.withClass "feather-warn"
                                     |> FeatherIcons.toHtml []
                                 ]
                             , button [ onClick (SetFeatureEdit Nothing) ]
                                 [ FeatherIcons.checkCircle
                                     |> FeatherIcons.withSize 12
+                                    |> FeatherIcons.withClass "feather-accept"
                                     |> FeatherIcons.toHtml []
                                 ]
                             ]
@@ -502,6 +506,7 @@ renderOverride featureEditState override =
                         button [ onClick (SetFeatureEdit (Just override)) ]
                             [ FeatherIcons.edit2
                                 |> FeatherIcons.withSize 12
+                                |> FeatherIcons.withClass "feather-action"
                                 |> FeatherIcons.toHtml []
                             ]
 
@@ -542,6 +547,7 @@ renderOverride featureEditState override =
         , button [ onClick (Archive override) ]
             [ FeatherIcons.archive
                 |> FeatherIcons.withSize 12
+                |> FeatherIcons.withClass "feather-warn"
                 |> FeatherIcons.toHtml []
             ]
         ]
@@ -584,8 +590,9 @@ renderArchivedOverride override =
     div []
         [ button [ onClick (Unarchive override) ] [ text "Unarchive" ]
         , button [ onClick (Delete override) ]
-            [ FeatherIcons.trash
+            [ FeatherIcons.trash2
                 |> FeatherIcons.withSize 12
+                |> FeatherIcons.withClass "feather-warn"
                 |> FeatherIcons.toHtml []
             ]
         , span [] [ text override.feature ]
