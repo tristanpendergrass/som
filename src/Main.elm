@@ -626,8 +626,13 @@ view model =
             div [ class "tab-content archive" ]
                 [ renderHeader
                 , renderTabs model
-                , div []
-                    (model.archivedOverrides
-                        |> List.map renderArchivedOverride
-                    )
+                , if List.isEmpty model.archivedOverrides then
+                    div [ class "empty-archive" ] [ text "Archive is empty." ]
+
+                  else
+                    div []
+                        (List.map
+                            renderArchivedOverride
+                            model.archivedOverrides
+                        )
                 ]
