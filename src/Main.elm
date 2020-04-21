@@ -46,14 +46,15 @@ type alias Feature =
     String
 
 
-type alias Variant =
-    String
+type VariantSelection
+    = NoVariantSelection
+    | VariantSelection String
 
 
 type alias Override =
     { id : Id
     , feature : Feature
-    , variantSelection : Maybe Variant
+    , variantSelection : VariantSelection
     , customVariantText : String
     }
 
@@ -100,20 +101,24 @@ init ( initialBrowserUrl, localStorageData ) =
                 Err _ ->
                     100
 
-        stringToVariantSelection : String -> Maybe Variant
-        stringToVariantSelection value =
-            if value == "" then
-                Nothing
+        decodeVariantSelection : List ( String, String ) -> VariantSelection
+        decodeVariantSelection value =
+            case value of
+                [ ( ".tag", "NoVariantSelection" ) ] ->
+                    NoVariantSelection
 
-            else
-                Just value
+                [ ( ".tag", "VariantSelection" ), ( "data", data ) ] ->
+                    VariantSelection data
+
+                _ ->
+                    NoVariantSelection
 
         overrideDecoder : D.Decoder Override
         overrideDecoder =
             D.map4 Override
                 (D.field "id" D.int)
                 (D.field "feature" D.string)
-                (D.field "variantSelection" (D.map stringToVariantSelection D.string))
+                (D.field "variantSelection" (D.map decodeVariantSelection (D.keyValuePairs D.string)))
                 (D.field "customVariantText" D.string)
 
         overrides : List Override
@@ -121,10 +126,10 @@ init ( initialBrowserUrl, localStorageData ) =
             let
                 overrideSorter : Override -> Override -> Order
                 overrideSorter left right =
-                    if left.variantSelection == Nothing && right.variantSelection == Nothing then
+                    if left.variantSelection == NoVariantSelection && right.variantSelection == NoVariantSelection then
                         EQ
 
-                    else if left.variantSelection == Nothing then
+                    else if left.variantSelection == NoVariantSelection then
                         GT
 
                     else
@@ -169,15 +174,34 @@ port sendUrl : String -> Cmd msg
 port sendToLocalStorage : E.Value -> Cmd msg
 
 
+variantSelectionToString : VariantSelection -> String
+variantSelectionToString variantSelection =
+    case variantSelection of
+        NoVariantSelection ->
+            ""
+
+        VariantSelection string ->
+            string
+
+
 encodeModel : Model -> E.Value
 encodeModel model =
     let
+        encodeVariantSelection : VariantSelection -> E.Value
+        encodeVariantSelection variantSelection =
+            case variantSelection of
+                NoVariantSelection ->
+                    E.object [ ( ".tag", E.string "NoVariantSelected" ) ]
+
+                VariantSelection _ ->
+                    E.object [ ( ".tag", E.string "VariantSelection" ), ( "data", E.string <| variantSelectionToString variantSelection ) ]
+
         overrideToJson : Override -> E.Value
         overrideToJson { id, feature, variantSelection, customVariantText } =
             E.object
                 [ ( "id", E.int id )
                 , ( "feature", E.string feature )
-                , ( "variantSelection", E.string <| Maybe.withDefault "" variantSelection )
+                , ( "variantSelection", encodeVariantSelection variantSelection )
                 , ( "customVariantText", E.string customVariantText )
                 ]
     in
@@ -202,13 +226,13 @@ applyOverridesToUrl overrides oldUrl =
                     (\override ->
                         \accumulator ->
                             case override.variantSelection of
-                                Nothing ->
+                                NoVariantSelection ->
                                     accumulator
 
-                                Just "Custom" ->
+                                VariantSelection "Custom" ->
                                     QueryParams.applyOverride override.feature override.customVariantText accumulator
 
-                                Just variant ->
+                                VariantSelection variant ->
                                     QueryParams.applyOverride override.feature variant accumulator
                     )
                     oldParams
@@ -282,10 +306,10 @@ update msg model =
                     { override
                         | variantSelection =
                             if selection == "" then
-                                Nothing
+                                NoVariantSelection
 
                             else
-                                Just selection
+                                VariantSelection selection
                     }
 
                 newOverrides : List Override
@@ -321,7 +345,7 @@ update msg model =
             let
                 newOverride : Override
                 newOverride =
-                    Override model.nonce model.feature (Just "ON") ""
+                    Override model.nonce model.feature (VariantSelection "ON") ""
 
                 newOverrides : List Override
                 newOverrides =
@@ -450,7 +474,7 @@ renderOverride featureEditState override =
     let
         variantValue : String
         variantValue =
-            override.variantSelection |> Maybe.withDefault ""
+            variantSelectionToString override.variantSelection
 
         featureText : Html Msg
         featureText =
@@ -520,10 +544,10 @@ renderOverride featureEditState override =
                 hideInput : Bool
                 hideInput =
                     case override.variantSelection of
-                        Just variant ->
+                        VariantSelection variant ->
                             variant /= "Custom"
 
-                        Nothing ->
+                        NoVariantSelection ->
                             True
             in
             input
@@ -539,7 +563,7 @@ renderOverride featureEditState override =
         , customVariantInput
         , select
             [ onInput (HandleVariantSelectionInput override) ]
-            [ option [ value "" ] [ text "Not Selected" ]
+            [ option [ value "", selected (variantValue == "") ] [ text "Not Selected" ]
             , variantOption "OFF"
             , variantOption "ON"
             , variantOption "Custom"
@@ -628,7 +652,7 @@ view model =
                     [ button
                         [ class "apply-button"
                         , onClick ApplyOverrides
-                        , disabled <| not <| List.any (\override -> override.variantSelection /= Nothing) model.overrides
+                        , disabled <| not <| List.any (\override -> override.variantSelection /= NoVariantSelection) model.overrides
                         ]
                         [ text "Apply Overrides" ]
                     ]
