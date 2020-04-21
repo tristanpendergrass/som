@@ -34,6 +34,41 @@ getOriginalValue (OriginalValue value) =
     value
 
 
+variantSelectionToString : VariantSelection -> String
+variantSelectionToString value =
+    case value of
+        NotSelectedVariant ->
+            "NotSelectedVariant"
+
+        OnVariant ->
+            "OnVariant"
+
+        OffVariant ->
+            "OffVariant"
+
+        CustomVariant ->
+            "CustomVariant"
+
+
+variantSelectionFromString : String -> VariantSelection
+variantSelectionFromString value =
+    case value of
+        "NotSelectedVariant" ->
+            NotSelectedVariant
+
+        "OnVariant" ->
+            OnVariant
+
+        "OffVariant" ->
+            OffVariant
+
+        "CustomVariant" ->
+            CustomVariant
+
+        _ ->
+            NotSelectedVariant
+
+
 
 -- MODEL
 
@@ -47,8 +82,10 @@ type alias Feature =
 
 
 type VariantSelection
-    = NoVariantSelection
-    | VariantSelection String
+    = NotSelectedVariant
+    | OnVariant
+    | OffVariant
+    | CustomVariant
 
 
 type alias Override =
@@ -101,24 +138,12 @@ init ( initialBrowserUrl, localStorageData ) =
                 Err _ ->
                     100
 
-        decodeVariantSelection : List ( String, String ) -> VariantSelection
-        decodeVariantSelection value =
-            case value of
-                [ ( ".tag", "NoVariantSelection" ) ] ->
-                    NoVariantSelection
-
-                [ ( ".tag", "VariantSelection" ), ( "data", data ) ] ->
-                    VariantSelection data
-
-                _ ->
-                    NoVariantSelection
-
         overrideDecoder : D.Decoder Override
         overrideDecoder =
             D.map4 Override
                 (D.field "id" D.int)
                 (D.field "feature" D.string)
-                (D.field "variantSelection" (D.map decodeVariantSelection (D.keyValuePairs D.string)))
+                (D.field "variantSelection" (D.map variantSelectionFromString D.string))
                 (D.field "customVariantText" D.string)
 
         overrides : List Override
@@ -126,10 +151,10 @@ init ( initialBrowserUrl, localStorageData ) =
             let
                 overrideSorter : Override -> Override -> Order
                 overrideSorter left right =
-                    if left.variantSelection == NoVariantSelection && right.variantSelection == NoVariantSelection then
+                    if left.variantSelection == NotSelectedVariant && right.variantSelection == NotSelectedVariant then
                         EQ
 
-                    else if left.variantSelection == NoVariantSelection then
+                    else if left.variantSelection == NotSelectedVariant then
                         GT
 
                     else
@@ -174,34 +199,15 @@ port sendUrl : String -> Cmd msg
 port sendToLocalStorage : E.Value -> Cmd msg
 
 
-variantSelectionToString : VariantSelection -> String
-variantSelectionToString variantSelection =
-    case variantSelection of
-        NoVariantSelection ->
-            ""
-
-        VariantSelection string ->
-            string
-
-
 encodeModel : Model -> E.Value
 encodeModel model =
     let
-        encodeVariantSelection : VariantSelection -> E.Value
-        encodeVariantSelection variantSelection =
-            case variantSelection of
-                NoVariantSelection ->
-                    E.object [ ( ".tag", E.string "NoVariantSelected" ) ]
-
-                VariantSelection _ ->
-                    E.object [ ( ".tag", E.string "VariantSelection" ), ( "data", E.string <| variantSelectionToString variantSelection ) ]
-
         overrideToJson : Override -> E.Value
         overrideToJson { id, feature, variantSelection, customVariantText } =
             E.object
                 [ ( "id", E.int id )
                 , ( "feature", E.string feature )
-                , ( "variantSelection", encodeVariantSelection variantSelection )
+                , ( "variantSelection", E.string (variantSelectionToString variantSelection) )
                 , ( "customVariantText", E.string customVariantText )
                 ]
     in
@@ -226,14 +232,17 @@ applyOverridesToUrl overrides oldUrl =
                     (\override ->
                         \accumulator ->
                             case override.variantSelection of
-                                NoVariantSelection ->
+                                NotSelectedVariant ->
                                     accumulator
 
-                                VariantSelection "Custom" ->
-                                    QueryParams.applyOverride override.feature override.customVariantText accumulator
+                                OnVariant ->
+                                    QueryParams.applyOverride override.feature "ON" accumulator
 
-                                VariantSelection variant ->
-                                    QueryParams.applyOverride override.feature variant accumulator
+                                OffVariant ->
+                                    QueryParams.applyOverride override.feature "OFF" accumulator
+
+                                CustomVariant ->
+                                    QueryParams.applyOverride override.feature override.customVariantText accumulator
                     )
                     oldParams
 
@@ -303,14 +312,7 @@ update msg model =
             let
                 newOverride : Override
                 newOverride =
-                    { override
-                        | variantSelection =
-                            if selection == "" then
-                                NoVariantSelection
-
-                            else
-                                VariantSelection selection
-                    }
+                    { override | variantSelection = variantSelectionFromString selection }
 
                 newOverrides : List Override
                 newOverrides =
@@ -345,7 +347,7 @@ update msg model =
             let
                 newOverride : Override
                 newOverride =
-                    Override model.nonce model.feature (VariantSelection "ON") ""
+                    Override model.nonce model.feature OnVariant ""
 
                 newOverrides : List Override
                 newOverrides =
@@ -472,10 +474,6 @@ renderAddOverride model =
 renderOverride : FeatureEditState -> Override -> Html Msg
 renderOverride featureEditState override =
     let
-        variantValue : String
-        variantValue =
-            variantSelectionToString override.variantSelection
-
         featureText : Html Msg
         featureText =
             span [ class "feature-name" ] [ text override.feature ]
@@ -534,21 +532,12 @@ renderOverride featureEditState override =
                                 |> FeatherIcons.toHtml []
                             ]
 
-        variantOption : String -> Html Msg
-        variantOption variant =
-            option [ value variant, selected (variantValue == variant) ] [ text variant ]
-
         customVariantInput : Html Msg
         customVariantInput =
             let
                 hideInput : Bool
                 hideInput =
-                    case override.variantSelection of
-                        VariantSelection variant ->
-                            variant /= "Custom"
-
-                        NoVariantSelection ->
-                            True
+                    override.variantSelection /= CustomVariant
             in
             input
                 [ onInput (HandleCustomVariantInput override)
@@ -563,10 +552,10 @@ renderOverride featureEditState override =
         , customVariantInput
         , select
             [ onInput (HandleVariantSelectionInput override) ]
-            [ option [ value "", selected (variantValue == "") ] [ text "Not Selected" ]
-            , variantOption "OFF"
-            , variantOption "ON"
-            , variantOption "Custom"
+            [ option [ value "NotSelectedVariant", selected (override.variantSelection == NotSelectedVariant) ] [ text "Not Selected" ]
+            , option [ value "OffVariant", selected (override.variantSelection == OffVariant) ] [ text "OFF" ]
+            , option [ value "OnVariant", selected (override.variantSelection == OnVariant) ] [ text "ON" ]
+            , option [ value "CustomVariant", selected (override.variantSelection == CustomVariant) ] [ text "Custom" ]
             ]
         , button [ onClick (Archive override) ]
             [ FeatherIcons.archive
@@ -652,7 +641,7 @@ view model =
                     [ button
                         [ class "apply-button"
                         , onClick ApplyOverrides
-                        , disabled <| not <| List.any (\override -> override.variantSelection /= NoVariantSelection) model.overrides
+                        , disabled <| not <| List.any (\override -> override.variantSelection /= NotSelectedVariant) model.overrides
                         ]
                         [ text "Apply Overrides" ]
                     ]
