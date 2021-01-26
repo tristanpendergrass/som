@@ -32,7 +32,8 @@ $ npm test -- --watch
 
 ## Todos
 
-- [ ] Add unit tests for QueryParams.elm (update readme with instructions to run)
+- [x] Add unit tests for QueryParams.elm (update readme with instructions to run)
+- [ ] Add Tailwind CSS library
 - [ ] Move Apply Overrides button to top left, on same row as filter textbox
 - [ ] Make it work in Firefox
 - [ ] Add a way to easily enter override_token
