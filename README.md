@@ -33,7 +33,9 @@ $ npm test -- --watch
 ## Todos
 
 - [x] Add unit tests for QueryParams.elm (update readme with instructions to run)
-- [ ] Add Tailwind CSS library
-- [ ] Move Apply Overrides button to top left, on same row as filter textbox
+- [x] Add Tailwind CSS library
+- [ ] Add button that adds a rule to the query string
+- [ ] Show which rules are detected in the query string
 - [ ] Make it work in Firefox
 - [ ] Add a way to easily enter override_token
+- [ ] Visual polish
