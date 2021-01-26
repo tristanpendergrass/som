@@ -2,10 +2,12 @@
   "devDependencies": {
     "cssnano": "^4.1.10",
     "elm-hot": "^1.1.2",
+    "elm-test": "^0.19.1-revision4",
     "node-elm-compiler": "^5.0.4",
     "sass": "^1.23.3"
   },
   "scripts": {
-    "build": "parcel build src/index.html --out-dir dist --public-url /dist/"
+    "build": "parcel build src/index.html --out-dir dist --public-url /dist/",
+    "test": "elm-test"
   }
 }
