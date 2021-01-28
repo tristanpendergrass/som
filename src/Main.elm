@@ -495,7 +495,7 @@ featureInputId =
 
 underlineInput : String
 underlineInput =
-    "mt-0 block w-full px-0.5 border-0 border-b-2 border-gray-200 focus:outline-none focus:ring-0 focus:border-gray-900"
+    "ml-0 mt-0 block w-full px-0.5 border-0 border-b-2 border-gray-200 focus:outline-none focus:ring-0 focus:border-gray-900"
 
 
 tooltip : String
@@ -505,14 +505,19 @@ tooltip =
 
 tooltipText : String
 tooltipText =
-    "tooltip-text absolute whitespace-no-wrap z-50 bg-gray-900 text-gray-100 text-sm py-1 px-2 rounded-sm transition duration-200 delay-300 text-sm"
+    "tooltip-text absolute whitespace-nowrap z-50 bg-gray-900 text-gray-100 text-sm py-1 px-2 rounded-sm transition duration-200 delay-300 text-sm"
+
+
+iconButton : String
+iconButton =
+    "icon-button p-1 rounded group focus:outline-none hover:bg-gray-100"
 
 
 renderAddOverride : Model -> Html Msg
 renderAddOverride model =
     div []
         [ form [ onSubmit HandleAddOverrideSubmit ]
-            [ button [ type_ "submit", disabled (model.feature == "") ]
+            [ button [ class iconButton, type_ "submit", disabled (model.feature == "") ]
                 [ FeatherIcons.plus
                     |> FeatherIcons.withSize 12
                     |> FeatherIcons.withClass "text-blue-500"
@@ -563,7 +568,7 @@ renderOverride featureEditState override =
                             editingOverride == override
             in
             button
-                [ class "p-1 rounded group focus:outline-none hover:bg-gray-100"
+                [ class iconButton
                 , classList [ ( "invisible", hideEditButton ) ]
                 , onClick (SetFeatureEdit (Just override))
                 ]
@@ -625,11 +630,14 @@ renderOverride featureEditState override =
                     ]
                 ]
             ]
-        , button [ onClick (Archive override) ]
-            [ FeatherIcons.archive
-                |> FeatherIcons.withSize 12
-                |> FeatherIcons.withClass "text-red-500"
-                |> FeatherIcons.toHtml []
+        , div [ class tooltip ]
+            [ button [ class iconButton, onClick (Archive override) ]
+                [ FeatherIcons.archive
+                    |> FeatherIcons.withSize 12
+                    |> FeatherIcons.withClass "text-red-500"
+                    |> FeatherIcons.toHtml []
+                ]
+            , div [ class tooltipText, class "-ml-12" ] [ text "Archive" ]
             ]
         ]
 
@@ -673,13 +681,24 @@ renderTabs model =
 renderArchivedOverride : Override -> Html Msg
 renderArchivedOverride override =
     div [ class "flex items-center" ]
-        [ button [ onClick (Unarchive override) ] [ text "Unarchive" ]
-        , span [ class "flex-grow" ] [ text override.feature ]
-        , button [ onClick (Delete override) ]
-            [ FeatherIcons.trash2
-                |> FeatherIcons.withSize 12
-                |> FeatherIcons.withClass "text-red-500"
-                |> FeatherIcons.toHtml []
+        [ div [ class tooltip ]
+            [ button [ class iconButton, onClick (Unarchive override) ]
+                [ FeatherIcons.rotateCcw
+                    |> FeatherIcons.withSize 12
+                    |> FeatherIcons.withClass "text-blue-500"
+                    |> FeatherIcons.toHtml []
+                ]
+            , div [ class tooltipText ] [ text "Unarchive" ]
+            ]
+        , div [ class "flex-grow truncate" ] [ text override.feature ]
+        , div [ class tooltip ]
+            [ button [ class iconButton, onClick (Delete override) ]
+                [ FeatherIcons.trash2
+                    |> FeatherIcons.withSize 12
+                    |> FeatherIcons.withClass "text-red-500"
+                    |> FeatherIcons.toHtml []
+                ]
+            , div [ class tooltipText, class "-ml-32" ] [ text "Permanently Delete" ]
             ]
         ]
 
