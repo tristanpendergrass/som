@@ -474,6 +474,16 @@ subscriptions _ =
 -- VIEW
 
 
+tooltip : String
+tooltip =
+    "tooltip relative"
+
+
+tooltipText : String
+tooltipText =
+    "tooltip-text absolute whitespace-no-wrap z-50 bg-gray-900 text-gray-100 text-sm py-1 px-2 rounded-sm transition duration-200 delay-300 text-sm"
+
+
 renderAddOverride : Model -> Html Msg
 renderAddOverride model =
     div []
@@ -493,7 +503,10 @@ renderOverride : FeatureEditState -> Override -> Html Msg
 renderOverride featureEditState override =
     let
         featureText =
-            div [ class "truncate" ] [ text override.feature ]
+            div [ class tooltip ]
+                [ div [ class "truncate" ] [ text override.feature ]
+                , div [ class tooltipText ] [ text override.feature ]
+                ]
 
         labelOrInput =
             case featureEditState of

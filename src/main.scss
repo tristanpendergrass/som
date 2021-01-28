@@ -8,4 +8,12 @@ body {
   font-family: "Atlas Grotesk", "AtlasGrotesk", sans-serif;
 }
 
+.tooltip-text {
+  visibility: hidden;
+  opacity: 0;
+}
+.tooltip:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+}
 
