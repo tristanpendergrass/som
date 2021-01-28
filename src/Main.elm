@@ -4,7 +4,7 @@ import Browser
 import FeatherIcons
 import Html exposing (Html, button, div, form, h1, h2, input, option, select, span, text)
 import Html.Attributes exposing (class, classList, disabled, placeholder, selected, style, type_, value)
-import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
+import Html.Events exposing (onBlur, onCheck, onClick, onInput, onSubmit)
 import Json.Decode as D
 import Json.Encode as E
 import List
@@ -474,6 +474,11 @@ subscriptions _ =
 -- VIEW
 
 
+underlineInput : String
+underlineInput =
+    "mt-0 block w-full px-0.5 border-0 border-b-2 border-gray-200 focus:outline-none focus:ring-0 focus:border-gray-900"
+
+
 tooltip : String
 tooltip =
     "tooltip relative"
@@ -494,7 +499,7 @@ renderAddOverride model =
                     |> FeatherIcons.withClass "text-blue-500"
                     |> FeatherIcons.toHtml []
                 ]
-            , input [ value model.feature, onInput HandleAddOverrideFeatureInput, placeholder "New Feature Name" ] []
+            , input [ class underlineInput, value model.feature, onInput HandleAddOverrideFeatureInput, placeholder "New Feature Name" ] []
             ]
         ]
 
@@ -519,13 +524,15 @@ renderOverride featureEditState override =
                             [ value (getDraftValue draftValue)
                             , onInput HandleFeatureDraftInput
                             , class "w-full"
+                            , class underlineInput
+                            , onBlur <| SetFeatureEdit Nothing
                             ]
                             []
 
                     else
                         featureText
 
-        editOrCancelButton =
+        editOrAcceptButton =
             let
                 buttonClasses =
                     "p-1 rounded group focus:outline-none hover:bg-gray-100"
@@ -571,6 +578,7 @@ renderOverride featureEditState override =
                 [ onInput (HandleCustomVariantInput override)
                 , value override.customVariantText
                 , classList [ ( "hidden", hideInput ) ]
+                , class underlineInput
                 , style "width" "100px"
                 ]
                 []
@@ -583,7 +591,7 @@ renderOverride featureEditState override =
     in
     div [ class "flex items-center space-x-1" ]
         [ selectionCheckbox
-        , editOrCancelButton
+        , editOrAcceptButton
         , div [ class "flex-grow flex justify-between" ]
             [ div [ class "bg-green-100", style "width" (String.fromInt halfWidth ++ "px") ] [ labelOrInput ]
             , div [] [ text ":" ]
@@ -609,7 +617,7 @@ renderOverride featureEditState override =
 renderFeatureFilter : Model -> Html Msg
 renderFeatureFilter model =
     input
-        [ class "w-full border-b border-black pb-1 outline-none mt-1 focus:border-blue-500"
+        [ class underlineInput
         , onInput HandleFeatureFilterInput
         , value model.featureFilter
         , placeholder "Filter by feature name"
@@ -674,7 +682,7 @@ view model =
                 , renderTabs model
                 , renderFeatureFilter model
                 , div
-                    [ class "flex-grow overflow-y-auto" ]
+                    [ class "flex-grow overflow-y-auto space-y-0.5" ]
                     (renderAddOverride model
                         :: (if List.isEmpty model.overrides then
                                 [ div [ class "w-full mt-32 text-center" ] [ text "No overrides exist." ] ]
