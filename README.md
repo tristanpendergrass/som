@@ -34,8 +34,10 @@ $ npm test -- --watch
 
 - [x] Add unit tests for QueryParams.elm (update readme with instructions to run)
 - [x] Add Tailwind CSS library
-- [ ] Add button that adds a rule to the query string
-- [ ] Show which rules are detected in the query string
-- [ ] Make it work in Firefox
-- [ ] Add a way to easily enter override_token
+- [x] Check it works in firefox
+- [x] Make selected/unselected be a checkbox on left
+- [x] Fix layout of rows
+- [ ] Tooltips for feature and variant
+- [ ] Make red/green background color of feature name be dependent on variant and only show when selected
+- [ ] Add a way to easily enter override_token (easily get override token?)
 - [ ] Visual polish
