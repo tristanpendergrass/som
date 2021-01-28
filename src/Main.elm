@@ -1,14 +1,16 @@
 port module Main exposing (main)
 
 import Browser
+import Browser.Dom
 import FeatherIcons
 import Html exposing (Html, button, div, form, h1, h2, input, option, select, span, text)
-import Html.Attributes exposing (checked, class, classList, disabled, placeholder, selected, style, type_, value)
+import Html.Attributes exposing (checked, class, classList, disabled, id, placeholder, selected, style, type_, value)
 import Html.Events exposing (onBlur, onCheck, onClick, onInput, onSubmit)
 import Json.Decode as D
 import Json.Encode as E
 import List
 import QueryParams
+import Task
 import Url exposing (Url)
 
 
@@ -277,6 +279,7 @@ type Msg
     | Archive Override
     | Unarchive Override
     | Delete Override
+    | FocusResult (Result Browser.Dom.Error ())
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -354,6 +357,15 @@ update msg model =
             in
             ( newModel, sendToLocalStorage <| encodeModel newModel )
 
+        FocusResult result ->
+            -- handle success or failure here
+            case result of
+                Err (Browser.Dom.NotFound _) ->
+                    ( model, Cmd.none )
+
+                Ok () ->
+                    ( model, Cmd.none )
+
         SetFeatureEdit maybeOverride ->
             case ( maybeOverride, model.featureEditState ) of
                 ( Nothing, NotEditing ) ->
@@ -370,7 +382,9 @@ update msg model =
                     ( newModel, sendToLocalStorage <| encodeModel newModel )
 
                 ( Just override, NotEditing ) ->
-                    ( { model | featureEditState = Editing override (DraftValue override.feature) (OriginalValue override.feature) }, Cmd.none )
+                    ( { model | featureEditState = Editing override (DraftValue override.feature) (OriginalValue override.feature) }
+                    , Browser.Dom.focus featureInputId |> Task.attempt FocusResult
+                    )
 
                 ( Just override, Editing previousOverride _ originalValue ) ->
                     let
@@ -474,6 +488,11 @@ subscriptions _ =
 -- VIEW
 
 
+featureInputId : String
+featureInputId =
+    "feature-input"
+
+
 underlineInput : String
 underlineInput =
     "mt-0 block w-full px-0.5 border-0 border-b-2 border-gray-200 focus:outline-none focus:ring-0 focus:border-gray-900"
@@ -521,7 +540,8 @@ renderOverride featureEditState override =
                 Editing editingOverride draftValue _ ->
                     if editingOverride == override then
                         input
-                            [ value (getDraftValue draftValue)
+                            [ id featureInputId
+                            , value (getDraftValue draftValue)
                             , onInput HandleFeatureDraftInput
                             , class "w-full"
                             , class underlineInput
@@ -532,41 +552,26 @@ renderOverride featureEditState override =
                     else
                         featureText
 
-        editOrAcceptButton =
+        editButton =
             let
-                buttonClasses =
-                    "p-1 rounded group focus:outline-none hover:bg-gray-100"
-
-                editButton =
-                    button [ onClick (SetFeatureEdit (Just override)), class buttonClasses ]
-                        [ FeatherIcons.edit2
-                            |> FeatherIcons.withSize 12
-                            |> FeatherIcons.withClass "text-blue-500 group-hover:text-blue-800"
-                            |> FeatherIcons.toHtml []
-                        ]
-
-                acceptButton =
-                    button [ onClick (SetFeatureEdit Nothing), class buttonClasses ]
-                        [ FeatherIcons.checkCircle
-                            |> FeatherIcons.withSize 12
-                            |> FeatherIcons.withClass "text-green-500 group-hover:text-green-800"
-                            |> FeatherIcons.toHtml []
-                        ]
-
-                contents =
+                hideEditButton =
                     case featureEditState of
                         NotEditing ->
-                            [ editButton ]
+                            False
 
                         Editing editingOverride _ _ ->
-                            if editingOverride == override then
-                                [ acceptButton ]
-
-                            else
-                                [ editButton ]
+                            editingOverride == override
             in
-            div [ class "" ]
-                contents
+            button
+                [ class "p-1 rounded group focus:outline-none hover:bg-gray-100"
+                , classList [ ( "invisible", hideEditButton ) ]
+                , onClick (SetFeatureEdit (Just override))
+                ]
+                [ FeatherIcons.edit2
+                    |> FeatherIcons.withSize 12
+                    |> FeatherIcons.withClass "text-blue-500 group-hover:text-blue-800"
+                    |> FeatherIcons.toHtml []
+                ]
 
         customVariantInput =
             let
@@ -603,7 +608,7 @@ renderOverride featureEditState override =
     in
     div [ class "flex items-center space-x-1" ]
         [ selectionCheckbox
-        , editOrAcceptButton
+        , editButton
         , div [ class "flex-grow flex justify-between" ]
             [ div [ classList [ ( titleColor, override.isSelected ) ], style "width" (String.fromInt halfWidth ++ "px") ] [ labelOrInput ]
             , div [] [ text ":" ]
