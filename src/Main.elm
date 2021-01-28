@@ -3,7 +3,7 @@ port module Main exposing (main)
 import Browser
 import FeatherIcons
 import Html exposing (Html, button, div, form, h1, h2, input, option, select, span, text)
-import Html.Attributes exposing (class, classList, disabled, placeholder, selected, style, type_, value)
+import Html.Attributes exposing (checked, class, classList, disabled, placeholder, selected, style, type_, value)
 import Html.Events exposing (onBlur, onCheck, onClick, onInput, onSubmit)
 import Json.Decode as D
 import Json.Encode as E
@@ -584,18 +584,33 @@ renderOverride featureEditState override =
                 []
 
         selectionCheckbox =
-            input [ type_ "checkbox", onCheck <| ToggleSelectOverride override ] []
+            input [ type_ "checkbox", onCheck <| ToggleSelectOverride override, checked <| override.isSelected ] []
 
+        -- hard coding this value since setting both divs to flex-grow:1 wasn't working for some reason
         halfWidth =
             177
+
+        titleColor =
+            case override.variantSelection of
+                OffVariant ->
+                    "bg-red-100"
+
+                OnVariant ->
+                    "bg-green-100"
+
+                CustomVariant ->
+                    "bg-yellow-100"
     in
     div [ class "flex items-center space-x-1" ]
         [ selectionCheckbox
         , editOrAcceptButton
         , div [ class "flex-grow flex justify-between" ]
-            [ div [ class "bg-green-100", style "width" (String.fromInt halfWidth ++ "px") ] [ labelOrInput ]
+            [ div [ classList [ ( titleColor, override.isSelected ) ], style "width" (String.fromInt halfWidth ++ "px") ] [ labelOrInput ]
             , div [] [ text ":" ]
-            , div [ class "flex justify-end space-x-1", style "width" (String.fromInt halfWidth ++ "px") ]
+            , div
+                [ class "flex justify-end space-x-1"
+                , style "width" (String.fromInt halfWidth ++ "px")
+                ]
                 [ customVariantInput
                 , select
                     [ onInput (HandleVariantSelectionInput override) ]

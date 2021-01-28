@@ -39,7 +39,8 @@ $ npm test -- --watch
 - [x] Fix layout of rows
 - [x] Tooltips for feature and variant
 - [x] Add underline for text box for custom variant/feature input
-- [ ] Make red/green background color of feature name be dependent on variant and only show when selected
+- [x] Make red/green background color of feature name be dependent on variant and only show when selected
+- [ ] Improve experience of editing name: remove accept button
 - [ ] Make add feature look like an override but with (+) button instead of edit and no other stuff
 - [ ] Add a way to easily enter override_token (easily get override token?)
 - [ ] Visual polish
