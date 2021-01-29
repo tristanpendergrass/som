@@ -12,6 +12,7 @@ body {
   visibility: hidden;
   opacity: 0;
 }
+
 .tooltip:hover .tooltip-text {
   visibility: visible;
   opacity: 1;
@@ -19,6 +20,5 @@ body {
 
 .icon-button:active {
   background-color: #E5E7EB;
-
 }
 

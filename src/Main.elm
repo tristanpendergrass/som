@@ -513,17 +513,28 @@ iconButton =
     "icon-button p-1 rounded group focus:outline-none hover:bg-gray-100"
 
 
+primaryButton : String
+primaryButton =
+    "primary-button bg-blue-500 text-gray-100 p-2 rounded-lg font-bold antialiased hover:bg-blue-400 cursor-pointer"
+
+
+primaryButtonDisabled : String
+primaryButtonDisabled =
+    "cursor-not-allowed opacity-50 hover:bg-blue-500"
+
+
 renderAddOverride : Model -> Html Msg
 renderAddOverride model =
-    div []
-        [ form [ onSubmit HandleAddOverrideSubmit ]
-            [ button [ class iconButton, type_ "submit", disabled (model.feature == "") ]
-                [ FeatherIcons.plus
-                    |> FeatherIcons.withSize 12
-                    |> FeatherIcons.withClass "text-blue-500"
-                    |> FeatherIcons.toHtml []
-                ]
-            , input [ class underlineInput, value model.feature, onInput HandleAddOverrideFeatureInput, placeholder "New Feature Name" ] []
+    div [ class "flex items-center space-x-1 my-1" ]
+        [ input [ type_ "checkbox", class "invisible" ] []
+        , button [ class iconButton, onClick HandleAddOverrideSubmit, disabled (model.feature == "") ]
+            [ FeatherIcons.plus
+                |> FeatherIcons.withSize 12
+                |> FeatherIcons.withClass "text-blue-500"
+                |> FeatherIcons.toHtml []
+            ]
+        , form [ onSubmit HandleAddOverrideSubmit, class "flex-grow" ]
+            [ input [ class underlineInput, value model.feature, onInput HandleAddOverrideFeatureInput, placeholder "New Feature Name" ] []
             ]
         ]
 
@@ -644,8 +655,10 @@ renderOverride featureEditState override =
 
 renderFeatureFilter : Model -> Html Msg
 renderFeatureFilter model =
+    -- Hiding this for the sake of visual clarity for now; can unhide it if we decide we need the feature later
     input
         [ class underlineInput
+        , class "hidden"
         , onInput HandleFeatureFilterInput
         , value model.featureFilter
         , placeholder "Filter by feature name"
@@ -708,6 +721,21 @@ renderHeader =
     h1 [ class "text-xl text-center border-b border-black" ] [ text "Stormcrow Override Manager" ]
 
 
+renderApplyOverridesButton : Model -> Html Msg
+renderApplyOverridesButton model =
+    let
+        isDisabled =
+            not <| List.any .isSelected model.overrides
+    in
+    button
+        [ class primaryButton
+        , classList [ ( primaryButtonDisabled, isDisabled ) ]
+        , onClick ApplyOverrides
+        , disabled isDisabled
+        ]
+        [ text "Apply Overrides" ]
+
+
 view : Model -> Html Msg
 view model =
     let
@@ -719,6 +747,8 @@ view model =
             div [ class bodyClasses ]
                 [ renderHeader
                 , renderTabs model
+                , div [ class "flex justify-center my-2" ]
+                    [ renderApplyOverridesButton model ]
                 , renderFeatureFilter model
                 , div
                     [ class "flex-grow overflow-y-auto space-y-0.5" ]
@@ -732,14 +762,6 @@ view model =
                                     |> List.map (renderOverride model.featureEditState)
                            )
                     )
-                , div []
-                    [ button
-                        [ class "bg-blue-500 text-gray-100 p-2 rounded-lg font-bold antialiased hover:bg-blue-400 cursor-pointer"
-                        , onClick ApplyOverrides
-                        , disabled <| not <| List.any .isSelected model.overrides
-                        ]
-                        [ text "Apply Overrides" ]
-                    ]
                 ]
 
         ArchiveTab ->

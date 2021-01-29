@@ -42,8 +42,9 @@ $ npm test -- --watch
 - [x] Make red/green background color of feature name be dependent on variant and only show when selected
 - [x] Improve experience of editing name: remove accept button, focus on edit
 - [x] Fix unarchive page
-- [ ] Improve styles of select dropdown
-- [ ] Make add feature look like an override but with (+) button instead of edit and no other stuff
+- [x] Make add feature look like an override but with (+) button instead of edit and no other stuff
+- [x] Make apply overrides button disable styles correct and reposition
 - [ ] Add a way to easily enter override_token (easily get override token?)
-- [ ] Visual polish
+- [ ] Improve styles of select dropdown
+- [ ] Let Enter blur the feature/variant input
 - [x] Make input for editing feature auto focus when edit button clicked https://stackoverflow.com/questions/31901397/how-to-set-focus-on-an-element-in-elm
