@@ -3,7 +3,7 @@ port module Main exposing (main)
 import Browser
 import Browser.Dom
 import FeatherIcons
-import Html exposing (Html, button, div, form, h1, h2, input, option, select, span, text)
+import Html exposing (Html, button, div, form, h1, h2, input, option, select, text)
 import Html.Attributes exposing (checked, class, classList, disabled, id, placeholder, selected, style, type_, value)
 import Html.Events exposing (onBlur, onCheck, onClick, onInput, onSubmit)
 import Json.Decode as D
@@ -196,6 +196,9 @@ port sendUrl : String -> Cmd msg
 port sendToLocalStorage : E.Value -> Cmd msg
 
 
+port createTab : String -> Cmd msg
+
+
 encodeModel : Model -> E.Value
 encodeModel model =
     let
@@ -266,6 +269,8 @@ type Msg
     | HandleFeatureFilterInput String
     | ApplyOverrides
     | SetActiveTab ActiveTab
+    | FocusResult (Result Browser.Dom.Error ())
+    | OpenGithub
       -- Add Override
     | HandleAddOverrideFeatureInput String
     | HandleAddOverrideSubmit
@@ -279,7 +284,6 @@ type Msg
     | Archive Override
     | Unarchive Override
     | Delete Override
-    | FocusResult (Result Browser.Dom.Error ())
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -337,6 +341,9 @@ update msg model =
 
         SetActiveTab activeTab ->
             ( { model | activeTab = activeTab }, Cmd.none )
+
+        OpenGithub ->
+            ( model, createTab "https://github.com/tristanpendergrass/som" )
 
         HandleAddOverrideFeatureInput feature ->
             ( { model | feature = feature }, Cmd.none )
@@ -736,6 +743,19 @@ renderApplyOverridesButton model =
         [ text "Apply Overrides" ]
 
 
+renderFooter : Html Msg
+renderFooter =
+    div [ class "flex justify-end items-center space-x-1" ]
+        [ div [ class "text-gray-500" ] [ text "v0.1" ]
+        , button [ class iconButton, class "flex items-center space-x-1 py-0", onClick OpenGithub ]
+            [ div [] [ text "GitHub" ]
+            , FeatherIcons.externalLink
+                |> FeatherIcons.withSize 12
+                |> FeatherIcons.toHtml []
+            ]
+        ]
+
+
 view : Model -> Html Msg
 view model =
     let
@@ -762,6 +782,7 @@ view model =
                                     |> List.map (renderOverride model.featureEditState)
                            )
                     )
+                , renderFooter
                 ]
 
         ArchiveTab ->
@@ -772,9 +793,10 @@ view model =
                     div [ class "w-full mt-32 text-center" ] [ text "Archive is empty." ]
 
                   else
-                    div []
+                    div [ class "overflow-y-scroll h-full" ]
                         (List.map
                             renderArchivedOverride
                             model.archivedOverrides
                         )
+                , renderFooter
                 ]

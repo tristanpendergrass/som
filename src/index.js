@@ -16,4 +16,8 @@ chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
   app.ports.sendToLocalStorage.subscribe(data => {
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
   });
+
+  app.ports.createTab.subscribe(url => {
+    chrome.tabs.create({url: url})
+  })
 });

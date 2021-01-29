@@ -44,6 +44,8 @@ $ npm test -- --watch
 - [x] Fix unarchive page
 - [x] Make add feature look like an override but with (+) button instead of edit and no other stuff
 - [x] Make apply overrides button disable styles correct and reposition
+- [x] Add github link and version number
+- [ ] Make overload list look better when lots of overrides
 - [ ] Add a way to easily enter override_token (easily get override token?)
 - [ ] Improve styles of select dropdown
 - [ ] Let Enter blur the feature/variant input
