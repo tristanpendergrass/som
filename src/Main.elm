@@ -677,21 +677,24 @@ renderTabs : Model -> Html Msg
 renderTabs model =
     let
         tabClasses =
-            "inline-block text-lg uppercase text-gray-500 cursor-pointer"
+            "inline-block text-lg uppercase cursor-pointer"
 
         activeTabClasses =
             "underline font-bold text-black"
+
+        inactiveTabClasses =
+            "text-gray-500 hover:underline"
     in
     div [ class "flex justify-center mx-4 space-x-4" ]
         [ h2
             [ class tabClasses
-            , classList [ ( activeTabClasses, model.activeTab == MainTab ) ]
+            , classList [ ( activeTabClasses, model.activeTab == MainTab ), ( inactiveTabClasses, model.activeTab /= MainTab ) ]
             , onClick (SetActiveTab MainTab)
             ]
             [ text "Main" ]
         , h2
             [ class tabClasses
-            , classList [ ( activeTabClasses, model.activeTab == ArchiveTab ) ]
+            , classList [ ( activeTabClasses, model.activeTab == ArchiveTab ), ( inactiveTabClasses, model.activeTab /= ArchiveTab ) ]
             , onClick (SetActiveTab ArchiveTab)
             ]
             [ text "Archive" ]
