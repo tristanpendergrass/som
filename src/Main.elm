@@ -108,6 +108,7 @@ type FeatureEditState
 type ActiveTab
     = MainTab
     | ArchiveTab
+    | VariantsTab
 
 
 type alias Model =
@@ -119,6 +120,7 @@ type alias Model =
     , featureEditState : FeatureEditState
     , featureFilter : String
     , activeTab : ActiveTab
+    , customVariants : List String
     }
 
 
@@ -127,12 +129,8 @@ init ( initialBrowserUrl, localStorageData ) =
     let
         nonce : Int
         nonce =
-            case D.decodeValue (D.field "nonce" D.int) localStorageData of
-                Ok val ->
-                    val
-
-                Err _ ->
-                    100
+            D.decodeValue (D.field "nonce" D.int) localStorageData
+                |> Result.withDefault 100
 
         overrideDecoder : D.Decoder Override
         overrideDecoder =
@@ -157,21 +155,19 @@ init ( initialBrowserUrl, localStorageData ) =
                     else
                         LT
             in
-            case D.decodeValue (D.field "overrides" (D.list overrideDecoder)) localStorageData of
-                Ok val ->
-                    List.sortWith overrideSorter val
-
-                Err _ ->
-                    []
+            D.decodeValue (D.field "overrides" (D.list overrideDecoder)) localStorageData
+                |> Result.map (List.sortWith overrideSorter)
+                |> Result.withDefault []
 
         archivedOverrides : List Override
         archivedOverrides =
-            case D.decodeValue (D.field "archivedOverrides" (D.list overrideDecoder)) localStorageData of
-                Ok val ->
-                    val
+            D.decodeValue (D.field "archivedOverrides" (D.list overrideDecoder)) localStorageData
+                |> Result.withDefault []
 
-                Err _ ->
-                    []
+        customVariants : List String
+        customVariants =
+            D.decodeValue (D.field "customVariants" (D.list D.string)) localStorageData
+                |> Result.withDefault []
     in
     ( { nonce = nonce
       , browserUrl = Url.fromString initialBrowserUrl
@@ -181,6 +177,7 @@ init ( initialBrowserUrl, localStorageData ) =
       , featureEditState = NotEditing
       , featureFilter = ""
       , activeTab = MainTab
+      , customVariants = customVariants
       }
     , Cmd.none
     )
@@ -216,6 +213,7 @@ encodeModel model =
         [ ( "nonce", E.int model.nonce )
         , ( "overrides", E.list overrideToJson model.overrides )
         , ( "archivedOverrides", E.list overrideToJson model.archivedOverrides )
+        , ( "customVariants", E.list E.string model.customVariants )
         ]
 
 
@@ -688,6 +686,12 @@ renderTabs model =
     div [ class "flex justify-center mx-4 space-x-4" ]
         [ h2
             [ class tabClasses
+            , classList [ ( activeTabClasses, model.activeTab == VariantsTab ), ( inactiveTabClasses, model.activeTab /= VariantsTab ) ]
+            , onClick (SetActiveTab VariantsTab)
+            ]
+            [ text "Variants" ]
+        , h2
+            [ class tabClasses
             , classList [ ( activeTabClasses, model.activeTab == MainTab ), ( inactiveTabClasses, model.activeTab /= MainTab ) ]
             , onClick (SetActiveTab MainTab)
             ]
@@ -801,5 +805,17 @@ view model =
                             renderArchivedOverride
                             model.archivedOverrides
                         )
+                , renderFooter
+                ]
+
+        VariantsTab ->
+            div [ class bodyClasses ]
+                [ renderHeader
+                , renderTabs model
+                , if List.isEmpty model.archivedOverrides then
+                    div [ class "w-full mt-32 text-center" ] [ text "No Custom Variants" ]
+
+                  else
+                    div [ class "overflow-y-scroll h-full" ] []
                 , renderFooter
                 ]
