@@ -2,6 +2,8 @@
 
 A chrome extension built with Elm to manage your stormcrow overrides. At the press of a button will apply one or more stormcrow overrides to the current url, e.g. "www.dropbox.com/home" -> "www.dropbox.com/home?stormcrow_override=my_experiement:ON". Open it by clicking the icon in the top right of the Chrome window.
 
+Storm icon credit: (srip)[https://www.flaticon.com/authors/srip].
+
 ## Installation
 
 ```

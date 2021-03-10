@@ -9,5 +9,11 @@
     "default_popup": "dist/index.html"
   },
 
-  "permissions": ["tabs"]
+  "permissions": ["tabs"],
+
+  "icons": {
+    "16": "cloud_16.png",
+    "48": "cloud_48.png",
+    "128": "cloud_128.png"
+  }
 }
