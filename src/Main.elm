@@ -212,15 +212,11 @@ encodeModel model =
         ]
 
 
-applyOverridesToUrl : List Override -> Url -> Url
-applyOverridesToUrl overrides oldUrl =
+makeUrl : List Override -> Url -> Url
+makeUrl overrides oldUrl =
     let
-        oldParams : List QueryParam
-        oldParams =
-            QueryParams.fromUrl oldUrl
-
-        newParams : List QueryParam
-        newParams =
+        applyOverrides : List QueryParam -> List QueryParam
+        applyOverrides oldQueryParams =
             overrides
                 |> List.filter .isSelected
                 |> List.foldl
@@ -236,11 +232,16 @@ applyOverridesToUrl overrides oldUrl =
                                 CustomVariant ->
                                     QueryParams.applyOverride override.feature override.customVariantText accumulator
                     )
-                    oldParams
+                    oldQueryParams
+
+        newQueryParams =
+            QueryParams.fromUrl oldUrl
+                |> applyOverrides
+                |> QueryParams.setTtl "1000000000"
 
         newUrl : Url
         newUrl =
-            { oldUrl | query = QueryParams.toString newParams }
+            { oldUrl | query = QueryParams.toString newQueryParams }
     in
     newUrl
 
@@ -328,7 +329,7 @@ update msg model =
                     let
                         newUrl : Url
                         newUrl =
-                            applyOverridesToUrl model.overrides oldUrl
+                            makeUrl model.overrides oldUrl
                     in
                     ( model, sendUrl <| Url.toString newUrl )
 
