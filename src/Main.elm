@@ -9,7 +9,7 @@ import Html.Events exposing (onBlur, onCheck, onClick, onInput, onSubmit)
 import Json.Decode as D
 import Json.Encode as E
 import List
-import QueryParams
+import QueryParams exposing (QueryParam)
 import Task
 import Url exposing (Url)
 
@@ -157,21 +157,14 @@ init ( initialBrowserUrl, localStorageData ) =
                     else
                         LT
             in
-            case D.decodeValue (D.field "overrides" (D.list overrideDecoder)) localStorageData of
-                Ok val ->
-                    List.sortWith overrideSorter val
-
-                Err _ ->
-                    []
+            D.decodeValue (D.field "overrides" (D.list overrideDecoder)) localStorageData
+                |> Result.map (List.sortWith overrideSorter)
+                |> Result.withDefault []
 
         archivedOverrides : List Override
         archivedOverrides =
-            case D.decodeValue (D.field "archivedOverrides" (D.list overrideDecoder)) localStorageData of
-                Ok val ->
-                    val
-
-                Err _ ->
-                    []
+            D.decodeValue (D.field "archivedOverrides" (D.list overrideDecoder)) localStorageData
+                |> Result.withDefault []
     in
     ( { nonce = nonce
       , browserUrl = Url.fromString initialBrowserUrl
@@ -222,11 +215,11 @@ encodeModel model =
 applyOverridesToUrl : List Override -> Url -> Url
 applyOverridesToUrl overrides oldUrl =
     let
-        oldParams : List QueryParams.QueryParam
+        oldParams : List QueryParam
         oldParams =
             QueryParams.fromUrl oldUrl
 
-        newParams : List QueryParams.QueryParam
+        newParams : List QueryParam
         newParams =
             overrides
                 |> List.filter .isSelected
