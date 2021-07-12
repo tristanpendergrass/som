@@ -542,9 +542,11 @@ renderAddOverride model =
 renderOverride : FeatureEditState -> Override -> Html Msg
 renderOverride featureEditState override =
     let
+        fadeIfInactive = class <| if override.isSelected then "" else "opacity-50"
+
         featureText =
             div [ class tooltip ]
-                [ div [ class "truncate" ] [ text override.feature ]
+                [ div [ class "truncate", fadeIfInactive] [ text override.feature ]
                 , div [ class tooltipText ] [ text override.feature ]
                 ]
 
@@ -627,10 +629,11 @@ renderOverride featureEditState override =
         , editButton
         , div [ class "flex-grow flex justify-between" ]
             [ div [ classList [ ( titleColor, override.isSelected ) ], style "width" (String.fromInt halfWidth ++ "px") ] [ labelOrInput ]
-            , div [] [ text ":" ]
+            , div [fadeIfInactive] [ text ":" ]
             , div
                 [ class "flex justify-end space-x-1"
                 , style "width" (String.fromInt halfWidth ++ "px")
+                , fadeIfInactive
                 ]
                 [ customVariantInput
                 , select
