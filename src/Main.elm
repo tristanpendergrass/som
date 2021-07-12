@@ -307,7 +307,7 @@ update msg model =
             let
                 newOverride : Override
                 newOverride =
-                    { override | variantSelection = variantSelectionFromString selection }
+                    { override | variantSelection = variantSelectionFromString selection, isSelected = True }
 
                 newOverrides : List Override
                 newOverrides =
