@@ -3,7 +3,7 @@ port module Main exposing (main)
 import Browser
 import Browser.Dom
 import FeatherIcons
-import Html exposing (Html, button, div, form, h1, h2, input, option, select, text)
+import Html exposing (Html, button, div, form, h1, h2, input, option, select, span, text)
 import Html.Attributes exposing (checked, class, classList, disabled, id, placeholder, selected, style, type_, value)
 import Html.Events exposing (onBlur, onCheck, onClick, onInput, onSubmit)
 import Json.Decode as D
@@ -515,7 +515,7 @@ iconButton =
 
 primaryButton : String
 primaryButton =
-    "primary-button bg-blue-500 text-gray-100 p-2 rounded-lg font-bold antialiased hover:bg-blue-400 cursor-pointer"
+    "primary-button bg-blue-500 text-gray-100 p-2 rounded-lg font-bold antialiased hover:bg-blue-400 cursor-pointer capitalize"
 
 
 primaryButtonDisabled : String
@@ -542,11 +542,17 @@ renderAddOverride model =
 renderOverride : FeatureEditState -> Override -> Html Msg
 renderOverride featureEditState override =
     let
-        fadeIfInactive = class <| if override.isSelected then "" else "opacity-50"
+        fadeIfInactive =
+            class <|
+                if override.isSelected then
+                    ""
+
+                else
+                    "opacity-50"
 
         featureText =
             div [ class tooltip ]
-                [ div [ class "truncate", fadeIfInactive] [ text override.feature ]
+                [ div [ class "truncate", fadeIfInactive ] [ text override.feature ]
                 , div [ class tooltipText ] [ text override.feature ]
                 ]
 
@@ -629,7 +635,7 @@ renderOverride featureEditState override =
         , editButton
         , div [ class "flex-grow flex justify-between" ]
             [ div [ classList [ ( titleColor, override.isSelected ) ], style "width" (String.fromInt halfWidth ++ "px") ] [ labelOrInput ]
-            , div [fadeIfInactive] [ text ":" ]
+            , div [ fadeIfInactive ] [ text ":" ]
             , div
                 [ class "flex justify-end space-x-1"
                 , style "width" (String.fromInt halfWidth ++ "px")
@@ -739,7 +745,14 @@ renderApplyOverridesButton model =
         , onClick ApplyOverrides
         , disabled isDisabled
         ]
-        [ text "Apply Overrides" ]
+        [ div [ class "flex items-center space-x-1" ]
+            [ FeatherIcons.zap
+                |> FeatherIcons.withClass "inline-block"
+                |> FeatherIcons.withSize 16
+                |> FeatherIcons.toHtml []
+            , span [ class "uppercase" ] [ text "Override" ]
+            ]
+        ]
 
 
 renderFooter : Html Msg
