@@ -236,6 +236,7 @@ makeUrl overrides oldUrl =
 
         newQueryParams =
             QueryParams.fromUrl oldUrl
+                |> List.filter (QueryParams.isStormcrowParam >> not)
                 |> applyOverrides
                 |> QueryParams.setTtl "1000000000"
 

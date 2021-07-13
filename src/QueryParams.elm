@@ -1,4 +1,4 @@
-module QueryParams exposing (QueryParam, applyOverride, fromUrl, setTtl, toString)
+module QueryParams exposing (QueryParam, applyOverride, fromUrl, isStormcrowParam, setTtl, toString)
 
 import Regex
 import Url exposing (Url)
@@ -73,35 +73,9 @@ singleToString param =
             "stormcrow_override=" ++ feature ++ ":" ++ variant
 
 
-{-| Checks a list of query params for a certain feature, and changes its variant if found.
-If not found, constructs and appends a new StormcrowOverride query to the list.
--}
 applyOverride : Feature -> Variant -> List QueryParam -> List QueryParam
 applyOverride overrideFeature overrideVariant oldQueryParams =
-    let
-        ( overridePresent, newQueryParams ) =
-            List.foldr
-                (\queryParam ->
-                    \( found, accQueryParams ) ->
-                        case queryParam of
-                            OtherParam _ ->
-                                ( found, queryParam :: accQueryParams )
-
-                            StormcrowParam feature _ ->
-                                if feature == overrideFeature then
-                                    ( True, StormcrowParam feature overrideVariant :: accQueryParams )
-
-                                else
-                                    ( found, queryParam :: accQueryParams )
-                )
-                ( False, [] )
-                oldQueryParams
-    in
-    if overridePresent then
-        newQueryParams
-
-    else
-        List.append oldQueryParams [ StormcrowParam overrideFeature overrideVariant ]
+    List.append oldQueryParams [ StormcrowParam overrideFeature overrideVariant ]
 
 
 toString : List QueryParam -> Maybe String
@@ -140,3 +114,13 @@ setTtl ttlValue queryParams =
             OtherParam ("stormcrow_override_ttl=" ++ ttlValue)
     in
     List.concat [ paramsWithTtlRemoved, [ ttlParam ] ]
+
+
+isStormcrowParam : QueryParam -> Bool
+isStormcrowParam queryParam =
+    case queryParam of
+        StormcrowParam _ _ ->
+            True
+
+        OtherParam _ ->
+            False
