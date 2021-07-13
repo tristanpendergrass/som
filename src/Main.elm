@@ -4,7 +4,7 @@ import Browser
 import Browser.Dom
 import FeatherIcons
 import Html exposing (Html, a, button, div, form, h1, h2, input, label, li, option, p, select, span, text, ul)
-import Html.Attributes exposing (checked, class, classList, disabled, for, href, id, placeholder, selected, style, type_, value)
+import Html.Attributes exposing (checked, class, classList, disabled, for, id, placeholder, selected, style, type_, value)
 import Html.Events exposing (onBlur, onCheck, onClick, onInput, onSubmit)
 import Json.Decode as D
 import Json.Encode as E
@@ -276,6 +276,7 @@ type Msg
     | SetActiveTab ActiveTab
     | FocusResult (Result Browser.Dom.Error ())
     | OpenGithub
+    | OpenToken
     | HandleOverrideTokenInput String
       -- Add Override
     | HandleAddOverrideFeatureInput String
@@ -350,6 +351,9 @@ update msg model =
 
         OpenGithub ->
             ( model, createTab "https://github.com/tristanpendergrass/som" )
+
+        OpenToken ->
+            ( model, createTab "https://www.dropbox.com/admin/stormcrow#/override" )
 
         HandleOverrideTokenInput newString ->
             let
@@ -556,6 +560,11 @@ primaryButton =
 primaryButtonDisabled : String
 primaryButtonDisabled =
     "cursor-not-allowed opacity-50 hover:bg-blue-500"
+
+
+linkText : String
+linkText =
+    "text-blue-500 hover:text-blue-400 font-bold uppercase px-3 py-1 text-xs mr-1 mb-1 cursor-pointer"
 
 
 renderAddOverride : Model -> Html Msg
@@ -843,7 +852,7 @@ view model =
                 [ renderHeader
                 , renderTabs model
                 , if List.isEmpty model.archivedOverrides then
-                    div [ class "w-full mt-32 text-center" ] [ text "Archive is empty." ]
+                    div [ class "w-full mt-32 text-center h-full" ] [ text "Archive is empty." ]
 
                   else
                     div [ class "overflow-y-scroll h-full" ]
@@ -874,11 +883,16 @@ view model =
             div [ class bodyClasses ]
                 [ renderHeader
                 , renderTabs model
-                , div [ class "flex-col w-100 items-start my-8 space-y-1" ]
+                , div [ class "flex-col w-100 items-start my-8 space-y-1 h-full" ]
                     [ label [ class "flex space-x-1 items-center", for "override-token" ]
                         [ span [ class "text-xs font-medium" ] [ text "Override Token" ]
                         , span [] [ helpIcon ]
                         ]
-                    , input [ class underlineInput, class "w-100", id "override-token", onInput HandleOverrideTokenInput, value model.overrideToken ] []
+                    , div [ class "flex items-center space-x-1" ]
+                        [ div [ class "flex-grow" ]
+                            [ input [ class underlineInput, id "override-token", onInput HandleOverrideTokenInput, value model.overrideToken ] [] ]
+                        , a [ class linkText, onClick OpenToken ] [ text "Get Token" ]
+                        ]
                     ]
+                , renderFooter
                 ]
