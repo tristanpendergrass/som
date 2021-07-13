@@ -3,8 +3,8 @@ port module Main exposing (main)
 import Browser
 import Browser.Dom
 import FeatherIcons
-import Html exposing (Html, button, div, form, h1, h2, input, label, option, select, span, text)
-import Html.Attributes exposing (checked, class, classList, disabled, for, id, placeholder, selected, style, type_, value)
+import Html exposing (Html, a, button, div, form, h1, h2, input, label, li, option, p, select, span, text, ul)
+import Html.Attributes exposing (checked, class, classList, disabled, for, href, id, placeholder, selected, style, type_, value)
 import Html.Events exposing (onBlur, onCheck, onClick, onInput, onSubmit)
 import Json.Decode as D
 import Json.Encode as E
@@ -524,9 +524,23 @@ tooltip =
     "tooltip relative"
 
 
+
+-- The common classes for other tooltip utilities. Not intended to be used directly.
+
+
+tooltipContent : String
+tooltipContent =
+    "tooltip-text absolute z-50 bg-gray-900 text-gray-100 text-sm py-1 px-2 rounded-sm transition duration-200 delay-300"
+
+
 tooltipText : String
 tooltipText =
-    "tooltip-text absolute whitespace-nowrap z-50 bg-gray-900 text-gray-100 text-sm py-1 px-2 rounded-sm transition duration-200 delay-300 text-sm"
+    tooltipContent ++ " whitespace-nowrap"
+
+
+tooltipBlockText : String
+tooltipBlockText =
+    tooltipContent ++ " break-words"
 
 
 iconButton : String
@@ -841,11 +855,30 @@ view model =
                 ]
 
         OptionsTab ->
+            let
+                helpIcon =
+                    div [ class tooltip ]
+                        [ FeatherIcons.helpCircle
+                            |> FeatherIcons.withSize 16
+                            |> FeatherIcons.toHtml []
+                        , div [ class tooltipBlockText, class "w-72" ]
+                            [ span [] [ text "A token is necessary if:" ]
+                            , ul [ class "list-disc list-inside" ]
+                                [ li [] [ text "using staging/prod AND" ]
+                                , li [] [ text "using a non-Dropbox account." ]
+                                ]
+                            , span [] [ text "You must also be on the corporate VPN. A given token lasts for 24 hours and SOM will clear this field after that time." ]
+                            ]
+                        ]
+            in
             div [ class bodyClasses ]
                 [ renderHeader
                 , renderTabs model
-                , div []
-                    [ label [ for "override-token" ] [ text "Override Token" ]
-                    , input [ id "override-token", onInput HandleOverrideTokenInput, value model.overrideToken ] []
+                , div [ class "flex-col w-100 items-start my-8 space-y-1" ]
+                    [ label [ class "flex space-x-1 items-center", for "override-token" ]
+                        [ span [ class "text-xs font-medium" ] [ text "Override Token" ]
+                        , span [] [ helpIcon ]
+                        ]
+                    , input [ class underlineInput, class "w-100", id "override-token", onInput HandleOverrideTokenInput, value model.overrideToken ] []
                     ]
                 ]
