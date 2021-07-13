@@ -3,14 +3,16 @@ port module Main exposing (main)
 import Browser
 import Browser.Dom
 import FeatherIcons
-import Html exposing (Html, a, button, div, form, h1, h2, input, label, li, option, p, select, span, text, ul)
+import Html exposing (Html, a, button, div, form, h1, h2, input, label, li, option, select, span, text, ul)
 import Html.Attributes exposing (checked, class, classList, disabled, for, id, placeholder, selected, style, type_, value)
 import Html.Events exposing (onBlur, onCheck, onClick, onInput, onSubmit)
 import Json.Decode as D
 import Json.Encode as E
+import Json.Encode.Extra
 import List
 import QueryParams exposing (QueryParam)
 import Task
+import Time
 import Url exposing (Url)
 
 
@@ -121,6 +123,7 @@ type alias Model =
     , featureFilter : String
     , activeTab : ActiveTab
     , overrideToken : String
+    , tokenCreatedAt : Maybe Time.Posix
     }
 
 
@@ -172,6 +175,12 @@ init ( initialBrowserUrl, localStorageData ) =
         overrideToken =
             D.decodeValue (D.field "overrideToken" D.string) localStorageData
                 |> Result.withDefault ""
+
+        tokenCreatedAt : Maybe Time.Posix
+        tokenCreatedAt =
+            D.decodeValue (D.field "tokenCreatedAt" D.int) localStorageData
+                |> Result.map (Time.millisToPosix >> Just)
+                |> Result.withDefault Nothing
     in
     ( { nonce = nonce
       , browserUrl = Url.fromString initialBrowserUrl
@@ -182,8 +191,9 @@ init ( initialBrowserUrl, localStorageData ) =
       , featureFilter = ""
       , activeTab = MainTab
       , overrideToken = overrideToken
+      , tokenCreatedAt = tokenCreatedAt
       }
-    , Cmd.none
+    , Task.perform CheckIfTokenExpired Time.now
     )
 
 
@@ -218,6 +228,7 @@ encodeModel model =
         , ( "overrides", E.list overrideToJson model.overrides )
         , ( "archivedOverrides", E.list overrideToJson model.archivedOverrides )
         , ( "overrideToken", E.string model.overrideToken )
+        , ( "tokenCreatedAt", Json.Encode.Extra.maybe (Time.posixToMillis >> E.int) model.tokenCreatedAt )
         ]
 
 
@@ -278,6 +289,8 @@ type Msg
     | OpenGithub
     | OpenToken
     | HandleOverrideTokenInput String
+    | SetTokenCreatedAt (Maybe Time.Posix)
+    | CheckIfTokenExpired Time.Posix
       -- Add Override
     | HandleAddOverrideFeatureInput String
     | HandleAddOverrideSubmit
@@ -371,6 +384,38 @@ update msg model =
                 newModel : Model
                 newModel =
                     { model | overrideToken = tokenString }
+            in
+            ( newModel, Cmd.batch [ sendToLocalStorage <| encodeModel newModel, Task.perform (Just >> SetTokenCreatedAt) Time.now ] )
+
+        SetTokenCreatedAt maybeTime ->
+            let
+                newModel : Model
+                newModel =
+                    { model | tokenCreatedAt = maybeTime }
+            in
+            ( newModel, sendToLocalStorage <| encodeModel newModel )
+
+        CheckIfTokenExpired now ->
+            let
+                -- We reset the token after 24 hours because that's when a token will stop working.
+                timeToReset =
+                    1000 * 60 * 60 * 24
+
+                shouldResetToken =
+                    model.tokenCreatedAt
+                        |> Maybe.map
+                            (\createdAt ->
+                                Time.posixToMillis now - Time.posixToMillis createdAt > timeToReset
+                            )
+                        |> Maybe.withDefault False
+
+                newModel : Model
+                newModel =
+                    if shouldResetToken then
+                        { model | tokenCreatedAt = Nothing, overrideToken = "" }
+
+                    else
+                        model
             in
             ( newModel, sendToLocalStorage <| encodeModel newModel )
 
