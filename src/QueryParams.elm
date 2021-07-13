@@ -1,4 +1,4 @@
-module QueryParams exposing (QueryParam, applyOverride, fromUrl, isStormcrowParam, setTtl, toString)
+module QueryParams exposing (QueryParam, applyOverride, fromUrl, isStormcrowParam, setToken, setTtl, toString)
 
 import Regex
 import Url exposing (Url)
@@ -106,8 +106,7 @@ setTtl ttlValue queryParams =
     let
         -- We want to remove the stormcrow_override_ttl param because we'll be adding our own to the url
         paramsWithTtlRemoved =
-            queryParams
-                |> List.filter (isTtlParam >> not)
+            List.filter (isTtlParam >> not) queryParams
 
         ttlParam : QueryParam
         ttlParam =
@@ -124,3 +123,30 @@ isStormcrowParam queryParam =
 
         OtherParam _ ->
             False
+
+
+isTokenParam : QueryParam -> Bool
+isTokenParam queryParam =
+    case queryParam of
+        StormcrowParam _ _ ->
+            False
+
+        OtherParam value ->
+            String.startsWith "override_token=" value
+
+
+setToken : String -> List QueryParam -> List QueryParam
+setToken token queryParams =
+    if token == "" then
+        queryParams
+
+    else
+        let
+            paramsWithTokenRemoved =
+                List.filter (isTokenParam >> not) queryParams
+
+            tokenParam : QueryParam
+            tokenParam =
+                OtherParam ("override_token=" ++ token)
+        in
+        List.concat [ paramsWithTokenRemoved, [ tokenParam ] ]

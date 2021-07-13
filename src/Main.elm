@@ -3,8 +3,8 @@ port module Main exposing (main)
 import Browser
 import Browser.Dom
 import FeatherIcons
-import Html exposing (Html, button, div, form, h1, h2, input, option, select, span, text)
-import Html.Attributes exposing (checked, class, classList, disabled, id, placeholder, selected, style, type_, value)
+import Html exposing (Html, button, div, form, h1, h2, input, label, option, select, span, text)
+import Html.Attributes exposing (checked, class, classList, disabled, for, id, placeholder, selected, style, type_, value)
 import Html.Events exposing (onBlur, onCheck, onClick, onInput, onSubmit)
 import Json.Decode as D
 import Json.Encode as E
@@ -108,6 +108,7 @@ type FeatureEditState
 type ActiveTab
     = MainTab
     | ArchiveTab
+    | OptionsTab
 
 
 type alias Model =
@@ -119,6 +120,7 @@ type alias Model =
     , featureEditState : FeatureEditState
     , featureFilter : String
     , activeTab : ActiveTab
+    , overrideToken : String
     }
 
 
@@ -165,6 +167,11 @@ init ( initialBrowserUrl, localStorageData ) =
         archivedOverrides =
             D.decodeValue (D.field "archivedOverrides" (D.list overrideDecoder)) localStorageData
                 |> Result.withDefault []
+
+        overrideToken : String
+        overrideToken =
+            D.decodeValue (D.field "overrideToken" D.string) localStorageData
+                |> Result.withDefault ""
     in
     ( { nonce = nonce
       , browserUrl = Url.fromString initialBrowserUrl
@@ -174,6 +181,7 @@ init ( initialBrowserUrl, localStorageData ) =
       , featureEditState = NotEditing
       , featureFilter = ""
       , activeTab = MainTab
+      , overrideToken = overrideToken
       }
     , Cmd.none
     )
@@ -209,11 +217,12 @@ encodeModel model =
         [ ( "nonce", E.int model.nonce )
         , ( "overrides", E.list overrideToJson model.overrides )
         , ( "archivedOverrides", E.list overrideToJson model.archivedOverrides )
+        , ( "overrideToken", E.string model.overrideToken )
         ]
 
 
-makeUrl : List Override -> Url -> Url
-makeUrl overrides oldUrl =
+makeUrl : String -> List Override -> Url -> Url
+makeUrl token overrides oldUrl =
     let
         applyOverrides : List QueryParam -> List QueryParam
         applyOverrides oldQueryParams =
@@ -239,6 +248,7 @@ makeUrl overrides oldUrl =
                 |> List.filter (QueryParams.isStormcrowParam >> not)
                 |> applyOverrides
                 |> QueryParams.setTtl "1000000000"
+                |> QueryParams.setToken token
 
         newUrl : Url
         newUrl =
@@ -266,6 +276,7 @@ type Msg
     | SetActiveTab ActiveTab
     | FocusResult (Result Browser.Dom.Error ())
     | OpenGithub
+    | HandleOverrideTokenInput String
       -- Add Override
     | HandleAddOverrideFeatureInput String
     | HandleAddOverrideSubmit
@@ -330,7 +341,7 @@ update msg model =
                     let
                         newUrl : Url
                         newUrl =
-                            makeUrl model.overrides oldUrl
+                            makeUrl model.overrideToken model.overrides oldUrl
                     in
                     ( model, sendUrl <| Url.toString newUrl )
 
@@ -339,6 +350,14 @@ update msg model =
 
         OpenGithub ->
             ( model, createTab "https://github.com/tristanpendergrass/som" )
+
+        HandleOverrideTokenInput newString ->
+            let
+                newModel : Model
+                newModel =
+                    { model | overrideToken = newString }
+            in
+            ( newModel, sendToLocalStorage <| encodeModel newModel )
 
         HandleAddOverrideFeatureInput feature ->
             ( { model | feature = feature }, Cmd.none )
@@ -702,6 +721,12 @@ renderTabs model =
             , onClick (SetActiveTab ArchiveTab)
             ]
             [ text "Archive" ]
+        , h2
+            [ class tabClasses
+            , classList [ ( activeTabClasses, model.activeTab == OptionsTab ), ( inactiveTabClasses, model.activeTab /= OptionsTab ) ]
+            , onClick (SetActiveTab OptionsTab)
+            ]
+            [ text "Options" ]
         ]
 
 
@@ -813,4 +838,14 @@ view model =
                             model.archivedOverrides
                         )
                 , renderFooter
+                ]
+
+        OptionsTab ->
+            div [ class bodyClasses ]
+                [ renderHeader
+                , renderTabs model
+                , div []
+                    [ label [ for "override-token" ] [ text "Override Token" ]
+                    , input [ id "override-token", onInput HandleOverrideTokenInput, value model.overrideToken ] []
+                    ]
                 ]
