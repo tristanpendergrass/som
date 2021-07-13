@@ -247,7 +247,7 @@ makeUrl token overrides oldUrl =
             QueryParams.fromUrl oldUrl
                 |> List.filter (QueryParams.isStormcrowParam >> not)
                 |> applyOverrides
-                |> QueryParams.setTtl "1000000000"
+                |> QueryParams.setTtl "7200"
                 |> QueryParams.setToken token
 
         newUrl : Url
@@ -357,9 +357,20 @@ update msg model =
 
         HandleOverrideTokenInput newString ->
             let
+                -- The token link
+                stringToDrop =
+                    "&override_token="
+
+                tokenString =
+                    if String.startsWith stringToDrop newString then
+                        String.dropLeft (String.length stringToDrop) newString
+
+                    else
+                        newString
+
                 newModel : Model
                 newModel =
-                    { model | overrideToken = newString }
+                    { model | overrideToken = tokenString }
             in
             ( newModel, sendToLocalStorage <| encodeModel newModel )
 
@@ -879,6 +890,9 @@ view model =
                             , span [] [ text "You must also be on the corporate VPN. A given token lasts for 24 hours and SOM will clear this field after that time." ]
                             ]
                         ]
+
+                tokenPlaceholder =
+                    "BQ8OS6e8J... *OR* &override_token=BQ8OS6e8J..."
             in
             div [ class bodyClasses ]
                 [ renderHeader
@@ -890,7 +904,21 @@ view model =
                         ]
                     , div [ class "flex items-center space-x-1" ]
                         [ div [ class "flex-grow" ]
-                            [ input [ class underlineInput, id "override-token", onInput HandleOverrideTokenInput, value model.overrideToken ] [] ]
+                            [ input
+                                [ class underlineInput
+                                , class <|
+                                    if model.overrideToken == "" then
+                                        "italic"
+
+                                    else
+                                        ""
+                                , id "override-token"
+                                , onInput HandleOverrideTokenInput
+                                , value model.overrideToken
+                                , placeholder tokenPlaceholder
+                                ]
+                                []
+                            ]
                         , a [ class linkText, onClick OpenToken ] [ text "Get Token" ]
                         ]
                     ]
