@@ -688,7 +688,7 @@ tooltipBlockText =
 
 iconButton : String
 iconButton =
-    "icon-button m-1 rounded group focus:outline-none hover:bg-gray-100"
+    "icon-button p-1 rounded group focus:outline-none hover:bg-gray-100"
 
 
 primaryButton : String
@@ -958,8 +958,11 @@ view model =
         bodyClasses =
             "flex flex-col h-full w-screen p-2"
 
-        listHeader =
-            "mt-2 mb-1 text-xl"
+        listHeaderClasses =
+            classList
+                [ ( "mt-2 mb-1 text-xl", True )
+                , ( "hidden", List.isEmpty model.inactiveOverrides )
+                ]
     in
     case model.activeTab of
         MainTab ->
@@ -978,13 +981,13 @@ view model =
 
                      else
                         [ renderAddOverride model
-                        , div [ class listHeader ] [ text "Active" ]
+                        , div [ listHeaderClasses ] [ text "Active" ]
                         , div [ class "space-y-0.5" ]
                             (model.activeOverrides
                                 |> List.filter (.feature >> matchString model.featureFilter)
                                 |> List.map (renderOverride True model.featureEditState)
                             )
-                        , div [ class listHeader ] [ text "Inactive" ]
+                        , div [ listHeaderClasses ] [ text "Inactive" ]
                         , div [ class "space-y-0.5" ]
                             (model.inactiveOverrides
                                 |> List.filter (.feature >> matchString model.featureFilter)
