@@ -759,41 +759,23 @@ renderOverride isActive featureEditState override =
                     else
                         featureText
 
-        editButton =
-            let
-                hideEditButton =
-                    case featureEditState of
-                        NotEditing ->
-                            False
-
-                        Editing editingOverride _ _ ->
-                            editingOverride == override
-            in
-            button
-                [ class iconButton
-                , classList [ ( "invisible", hideEditButton ) ]
-                , onClick (SetFeatureEdit (Just override))
-                ]
-                [ FeatherIcons.edit2
-                    |> FeatherIcons.withSize 12
-                    |> FeatherIcons.withClass "text-blue-500 group-hover:text-blue-800"
-                    |> FeatherIcons.toHtml []
-                ]
-
         toggleButton =
             button
                 [ class iconButton
-                , class "group relative"
+                , class "opacity-0 group-hover:opacity-100"
                 , onClick (ToggleSelectOverride override (not isActive))
                 ]
-                [ FeatherIcons.minusCircle
-                    |> FeatherIcons.withSize 16
-                    |> FeatherIcons.withClass "opacity-0 group-hover:opacity-100 text-blue-500 group-hover:text-blue-800"
-                    |> FeatherIcons.toHtml []
-                , FeatherIcons.circle
-                    |> FeatherIcons.withSize 16
-                    |> FeatherIcons.withClass "opacity-100 group-hover:opacity-0 text-blue-500 group-hover:text-blue-800 absolute top-0 left-0 fill-current"
-                    |> FeatherIcons.toHtml []
+                [ if isActive then
+                    FeatherIcons.minusCircle
+                        |> FeatherIcons.withSize 16
+                        |> FeatherIcons.withClass "opacity-0 group-hover:opacity-100 text-red-500 group-hover:text-red-800"
+                        |> FeatherIcons.toHtml []
+
+                  else
+                    FeatherIcons.plusCircle
+                        |> FeatherIcons.withSize 16
+                        |> FeatherIcons.withClass "opacity-0 group-hover:opacity-100 text-blue-500 group-hover:text-blue-800"
+                        |> FeatherIcons.toHtml []
                 ]
 
         customVariantInput =
@@ -826,7 +808,7 @@ renderOverride isActive featureEditState override =
                 CustomVariant ->
                     "bg-yellow-100"
     in
-    div [ class "flex items-center space-x-1" ]
+    div [ class "flex items-center space-x-1 group" ]
         [ toggleButton
         , div [ class "flex-grow flex justify-between" ]
             -- [ div [ classList [ ( titleColor, isActive ) ], style "width" (String.fromInt halfWidth ++ "px") ] [ labelOrInput ]
