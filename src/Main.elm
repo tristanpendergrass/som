@@ -116,7 +116,8 @@ type ActiveTab
 type alias Model =
     { nonce : Int
     , browserUrl : Maybe Url
-    , overrides : List Override
+    , activeOverrides : List Override
+    , inactiveOverrides : List Override
     , archivedOverrides : List Override
     , feature : String
     , featureEditState : FeatureEditState
@@ -148,22 +149,16 @@ init ( initialBrowserUrl, localStorageData ) =
                 (D.field "customVariantText" D.string)
                 (D.field "isSelected" D.bool)
 
-        overrides : List Override
-        overrides =
-            let
-                overrideSorter : Override -> Override -> Order
-                overrideSorter left right =
-                    if left.isSelected == right.isSelected then
-                        EQ
-
-                    else if right.isSelected then
-                        GT
-
-                    else
-                        LT
-            in
+        activeOverrides : List Override
+        activeOverrides =
             D.decodeValue (D.field "overrides" (D.list overrideDecoder)) localStorageData
-                |> Result.map (List.sortWith overrideSorter)
+                |> Result.map (List.filter .isSelected)
+                |> Result.withDefault []
+
+        inactiveOverrides : List Override
+        inactiveOverrides =
+            D.decodeValue (D.field "overrides" (D.list overrideDecoder)) localStorageData
+                |> Result.map (List.filter (.isSelected >> not))
                 |> Result.withDefault []
 
         archivedOverrides : List Override
@@ -181,18 +176,23 @@ init ( initialBrowserUrl, localStorageData ) =
             D.decodeValue (D.field "tokenCreatedAt" D.int) localStorageData
                 |> Result.map (Time.millisToPosix >> Just)
                 |> Result.withDefault Nothing
+
+        model : Model
+        model =
+            { nonce = nonce
+            , browserUrl = Url.fromString initialBrowserUrl
+            , activeOverrides = activeOverrides
+            , inactiveOverrides = inactiveOverrides
+            , archivedOverrides = archivedOverrides
+            , feature = ""
+            , featureEditState = NotEditing
+            , featureFilter = ""
+            , activeTab = MainTab
+            , overrideToken = overrideToken
+            , tokenCreatedAt = tokenCreatedAt
+            }
     in
-    ( { nonce = nonce
-      , browserUrl = Url.fromString initialBrowserUrl
-      , overrides = overrides
-      , archivedOverrides = archivedOverrides
-      , feature = ""
-      , featureEditState = NotEditing
-      , featureFilter = ""
-      , activeTab = MainTab
-      , overrideToken = overrideToken
-      , tokenCreatedAt = tokenCreatedAt
-      }
+    ( model
     , Task.perform CheckIfTokenExpired Time.now
     )
 
@@ -225,7 +225,7 @@ encodeModel model =
     in
     E.object
         [ ( "nonce", E.int model.nonce )
-        , ( "overrides", E.list overrideToJson model.overrides )
+        , ( "overrides", E.list overrideToJson (List.concat [ model.activeOverrides, model.inactiveOverrides ]) )
         , ( "archivedOverrides", E.list overrideToJson model.archivedOverrides )
         , ( "overrideToken", E.string model.overrideToken )
         , ( "tokenCreatedAt", Json.Encode.Extra.maybe (Time.posixToMillis >> E.int) model.tokenCreatedAt )
@@ -268,18 +268,6 @@ makeUrl token overrides oldUrl =
     newUrl
 
 
-replace : a -> a -> List a -> List a
-replace oldA newA =
-    List.map
-        (\ax ->
-            if ax == oldA then
-                newA
-
-            else
-                ax
-        )
-
-
 type Msg
     = SetBrowserUrl String
     | HandleFeatureFilterInput String
@@ -306,6 +294,71 @@ type Msg
     | Delete Override
 
 
+replaceInTwoLists : a -> a -> ( List a, List a ) -> ( List a, List a )
+replaceInTwoLists el newEl ( left, right ) =
+    let
+        replaceEl x =
+            if x == el then
+                newEl
+
+            else
+                x
+    in
+    if List.member el left then
+        ( List.map replaceEl left, right )
+
+    else if List.member el right then
+        ( left, List.map replaceEl right )
+
+    else
+        ( left, right )
+
+
+removeFromTwoLists : a -> ( List a, List a ) -> ( List a, List a )
+removeFromTwoLists el ( left, right ) =
+    if List.member el left then
+        ( List.filter ((/=) el) left, right )
+
+    else if List.member el right then
+        ( left, List.filter ((/=) el) right )
+
+    else
+        ( left, right )
+
+
+replaceOverride : Override -> Override -> Model -> Model
+replaceOverride override newOverride model =
+    let
+        ( newActiveOverrides, newInactiveOverrides ) =
+            replaceInTwoLists override newOverride ( model.activeOverrides, model.inactiveOverrides )
+    in
+    { model | activeOverrides = newActiveOverrides, inactiveOverrides = newInactiveOverrides }
+
+
+removeOverride : Override -> Model -> Model
+removeOverride override model =
+    let
+        ( newActiveOverrides, newInactiveOverrides ) =
+            removeFromTwoLists override ( model.activeOverrides, model.inactiveOverrides )
+    in
+    { model | activeOverrides = newActiveOverrides, inactiveOverrides = newInactiveOverrides }
+
+
+setFeatureEditState : FeatureEditState -> Model -> Model
+setFeatureEditState newFeatureEditState model =
+    { model | featureEditState = newFeatureEditState }
+
+
+addActiveOverride : Override -> Model -> Model
+addActiveOverride override model =
+    { model | activeOverrides = override :: model.activeOverrides }
+
+
+addInactiveOverride : Override -> Model -> Model
+addInactiveOverride override model =
+    { model | inactiveOverrides = override :: model.inactiveOverrides }
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -320,13 +373,10 @@ update msg model =
                         | customVariantText = text
                     }
 
-                newOverrides : List Override
-                newOverrides =
-                    replace override newOverride model.overrides
-
                 newModel : Model
                 newModel =
-                    { model | overrides = newOverrides }
+                    model
+                        |> replaceOverride override newOverride
             in
             ( newModel, sendToLocalStorage <| encodeModel newModel )
 
@@ -336,13 +386,10 @@ update msg model =
                 newOverride =
                     { override | variantSelection = variantSelectionFromString selection, isSelected = True }
 
-                newOverrides : List Override
-                newOverrides =
-                    replace override newOverride model.overrides
-
                 newModel : Model
                 newModel =
-                    { model | overrides = newOverrides }
+                    model
+                        |> replaceOverride override newOverride
             in
             ( newModel, sendToLocalStorage <| encodeModel newModel )
 
@@ -355,7 +402,7 @@ update msg model =
                     let
                         newUrl : Url
                         newUrl =
-                            makeUrl model.overrideToken model.overrides oldUrl
+                            makeUrl model.overrideToken (List.concat [ model.activeOverrides, model.inactiveOverrides ]) oldUrl
                     in
                     ( model, sendUrl <| Url.toString newUrl )
 
@@ -399,8 +446,10 @@ update msg model =
             let
                 -- We reset the token after 24 hours because that's when a token will stop working.
                 timeToReset =
-                    1000 * 60 * 60 * 24
+                    --1000 * 60 * 60 * 24 -- 24 hours in millis
+                    1000 * 60 * 10
 
+                -- 10 min in millis
                 shouldResetToken =
                     model.tokenCreatedAt
                         |> Maybe.map
@@ -428,13 +477,13 @@ update msg model =
                 newOverride =
                     Override model.nonce model.feature OnVariant "" True
 
-                newOverrides : List Override
-                newOverrides =
-                    newOverride :: model.overrides
+                newActiveOverrides : List Override
+                newActiveOverrides =
+                    newOverride :: model.activeOverrides
 
                 newModel : Model
                 newModel =
-                    { model | nonce = model.nonce + 1, overrides = newOverrides, feature = "" }
+                    { model | nonce = model.nonce + 1, activeOverrides = newActiveOverrides, feature = "" }
             in
             ( newModel, sendToLocalStorage <| encodeModel newModel )
 
@@ -455,10 +504,9 @@ update msg model =
                 ( Nothing, Editing previousOverride draft _ ) ->
                     let
                         newModel =
-                            { model
-                                | featureEditState = NotEditing
-                                , overrides = replace previousOverride { previousOverride | feature = getDraftValue draft } model.overrides
-                            }
+                            model
+                                |> replaceOverride previousOverride { previousOverride | feature = getDraftValue draft }
+                                |> setFeatureEditState NotEditing
                     in
                     ( newModel, sendToLocalStorage <| encodeModel newModel )
 
@@ -469,11 +517,13 @@ update msg model =
 
                 ( Just override, Editing previousOverride _ originalValue ) ->
                     let
+                        newFeatureEditState =
+                            Editing override (DraftValue override.feature) (OriginalValue override.feature)
+
                         newModel =
-                            { model
-                                | featureEditState = Editing override (DraftValue override.feature) (OriginalValue override.feature)
-                                , overrides = replace previousOverride { previousOverride | feature = getOriginalValue originalValue } model.overrides
-                            }
+                            model
+                                |> replaceOverride previousOverride { previousOverride | feature = getOriginalValue originalValue }
+                                |> setFeatureEditState newFeatureEditState
                     in
                     ( newModel, sendToLocalStorage <| encodeModel newModel )
 
@@ -491,12 +541,13 @@ update msg model =
                     ( model, Cmd.none )
 
                 Editing override _ originalValue ->
-                    ( { model
-                        | featureEditState = NotEditing
-                        , overrides = replace override { override | feature = getOriginalValue originalValue } model.overrides
-                      }
-                    , Cmd.none
-                    )
+                    let
+                        newModel =
+                            model
+                                |> replaceOverride override { override | feature = getOriginalValue originalValue }
+                                |> setFeatureEditState NotEditing
+                    in
+                    ( newModel, Cmd.none )
 
         HandleFeatureFilterInput value ->
             ( { model | featureFilter = value }, Cmd.none )
@@ -505,10 +556,9 @@ update msg model =
             let
                 newModel : Model
                 newModel =
-                    { model
-                        | overrides = model.overrides |> List.filter ((/=) override)
-                        , archivedOverrides = override :: model.archivedOverrides
-                    }
+                    model
+                        |> removeOverride override
+                        |> (\oldModel -> { oldModel | archivedOverrides = override :: model.archivedOverrides })
             in
             ( newModel, sendToLocalStorage <| encodeModel newModel )
 
@@ -517,7 +567,7 @@ update msg model =
                 newModel : Model
                 newModel =
                     { model
-                        | overrides = override :: model.overrides
+                        | activeOverrides = override :: model.activeOverrides
                         , archivedOverrides = model.archivedOverrides |> List.filter ((/=) override)
                     }
             in
@@ -533,22 +583,20 @@ update msg model =
             in
             ( newModel, sendToLocalStorage <| encodeModel newModel )
 
-        ToggleSelectOverride toggledOverride isChecked ->
+        ToggleSelectOverride override isChecked ->
             let
-                newOverrides =
-                    model.overrides
-                        |> List.map
-                            (\override ->
-                                if override == toggledOverride then
-                                    { override | isSelected = isChecked }
+                addToList =
+                    if isChecked then
+                        addActiveOverride
 
-                                else
-                                    override
-                            )
+                    else
+                        addInactiveOverride
 
                 newModel : Model
                 newModel =
-                    { model | overrides = newOverrides }
+                    model
+                        |> removeOverride override
+                        |> addToList override
             in
             ( newModel, sendToLocalStorage <| encodeModel newModel )
 
@@ -843,7 +891,7 @@ renderApplyOverridesButton : Model -> Html Msg
 renderApplyOverridesButton model =
     let
         isDisabled =
-            not <| List.any .isSelected model.overrides
+            List.isEmpty model.activeOverrides
     in
     button
         [ class primaryButton
@@ -890,15 +938,26 @@ view model =
                 , renderFeatureFilter model
                 , div
                     [ class "flex-grow overflow-y-auto space-y-0.5" ]
-                    (renderAddOverride model
-                        :: (if List.isEmpty model.overrides then
-                                [ div [ class "w-full mt-32 text-center" ] [ text "No overrides exist." ] ]
+                    (if List.isEmpty model.activeOverrides && List.isEmpty model.inactiveOverrides then
+                        [ renderAddOverride model
+                        , div [ class "w-full mt-32 text-center" ] [ text "No overrides exist." ]
+                        ]
 
-                            else
-                                model.overrides
-                                    |> List.filter (.feature >> matchString model.featureFilter)
-                                    |> List.map (renderOverride model.featureEditState)
-                           )
+                     else
+                        [ renderAddOverride model
+                        , div [] [ text "Active Overrides" ]
+                        , div []
+                            (model.activeOverrides
+                                |> List.filter (.feature >> matchString model.featureFilter)
+                                |> List.map (renderOverride model.featureEditState)
+                            )
+                        , div [] [ text "Inactive Overrides" ]
+                        , div []
+                            (model.inactiveOverrides
+                                |> List.filter (.feature >> matchString model.featureFilter)
+                                |> List.map (renderOverride model.featureEditState)
+                            )
+                        ]
                     )
                 , renderFooter
                 ]
