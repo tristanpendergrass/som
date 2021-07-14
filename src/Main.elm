@@ -867,13 +867,13 @@ renderOverride isActive featureEditState override =
                 [ if isActive then
                     FeatherIcons.minusCircle
                         |> FeatherIcons.withSize 16
-                        |> FeatherIcons.withClass "opacity-0 group-hover:opacity-100 text-red-500 group-hover:text-red-800"
+                        |> FeatherIcons.withClass "opacity-0 group-hover:opacity-100 text-red-500"
                         |> FeatherIcons.toHtml []
 
                   else
                     FeatherIcons.plusCircle
                         |> FeatherIcons.withSize 16
-                        |> FeatherIcons.withClass "opacity-0 group-hover:opacity-100 text-blue-500 group-hover:text-blue-800"
+                        |> FeatherIcons.withClass "opacity-0 group-hover:opacity-100 text-blue-500"
                         |> FeatherIcons.toHtml []
                 ]
 
