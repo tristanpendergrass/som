@@ -70,6 +70,8 @@ ttlLengthEncoder ttlLength =
 type alias TtlConfigObject =
     { length : TtlLength
     , seconds : Int
+    , htmlId : String
+    , htmlText : String
     }
 
 
@@ -80,10 +82,10 @@ ttlConfig :
     , max : TtlConfigObject
     }
 ttlConfig =
-    { short = { length = TtlShort, seconds = 60 * 5 }
-    , medium = { length = TtlMedium, seconds = 60 * 60 }
-    , long = { length = TtlLong, seconds = 60 * 60 * 24 }
-    , max = { length = TtlMax, seconds = 60 * 60 * 24 * 30 }
+    { short = { length = TtlShort, seconds = 60 * 5, htmlId = "ttl-short", htmlText = "5 min" }
+    , medium = { length = TtlMedium, seconds = 60 * 60, htmlId = "ttl-medium", htmlText = "1 hour" }
+    , long = { length = TtlLong, seconds = 60 * 60 * 24, htmlId = "ttl-long", htmlText = "24 hours" }
+    , max = { length = TtlMax, seconds = 60 * 60 * 24 * 30, htmlId = "ttl-max", htmlText = "30 days (max)" }
     }
 
 
@@ -1113,7 +1115,7 @@ view model =
 
         OptionsTab ->
             let
-                helpIcon =
+                tokenHelpIcon =
                     div [ class tooltip ]
                         [ FeatherIcons.helpCircle
                             |> FeatherIcons.withSize 16
@@ -1128,58 +1130,68 @@ view model =
                             ]
                         ]
 
+                ttlHelpIcon =
+                    div [ class tooltip ]
+                        [ FeatherIcons.helpCircle
+                            |> FeatherIcons.withSize 16
+                            |> FeatherIcons.toHtml []
+                        , div [ class tooltipBlockText, class "w-72" ]
+                            [ span [] [ text "Time to Live (TTL) is the amount of time that a Stormcrow override will stay active once set. The default setting when not using SOM is 5 minutes." ]
+                            ]
+                        ]
+
                 tokenPlaceholder =
                     "BQ8OS6e8J... *OR* &override_token=BQ8OS6e8J..."
 
-                radioButtonContainer =
-                    "flex space-x-0.5 cursor-pointer"
+                ttlRadioOption : TtlConfigObject -> Html Msg
+                ttlRadioOption { htmlId, length, htmlText } =
+                    div [ class "flex space-x-1 cursor-pointer items-center" ]
+                        [ input [ type_ "radio", id htmlId, name "override-ttl", checked <| model.ttlLength == length, onCheck (\_ -> SetTtl length) ] []
+                        , label [ for htmlId ] [ text htmlText ]
+                        ]
+
+                optionContainer =
+                    "flex-col space-y-1 w-full border border-gray-700 py-4 px-2"
             in
             div [ class bodyClasses ]
                 [ renderHeader
                 , renderTabs model
-                , div [ class "flex-col w-100 items-start my-8 space-y-1 h-full" ]
-                    [ label [ class "flex space-x-1 items-center", for "override-token" ]
-                        [ span [ class "text-xs font-medium" ] [ text "Override Token" ]
-                        , span [] [ helpIcon ]
-                        ]
-                    , div [ class "flex items-center space-x-1" ]
-                        [ div [ class "flex-grow" ]
-                            [ input
-                                [ class underlineInput
-                                , class <|
-                                    if model.overrideToken == "" then
-                                        "italic"
+                , div [ class "flex-col w-100 items-start my-4 space-y-4 h-full" ]
+                    [ div [ class optionContainer ]
+                        [ label [ class "flex space-x-1 items-center", for "override-token" ]
+                            [ span [ class "text-xs font-medium" ] [ text "Override Token" ]
+                            , span [] [ tokenHelpIcon ]
+                            ]
+                        , div [ class "flex items-center space-x-1" ]
+                            [ div [ class "flex-grow" ]
+                                [ input
+                                    [ class underlineInput
+                                    , class <|
+                                        if model.overrideToken == "" then
+                                            "italic"
 
-                                    else
-                                        ""
-                                , id "override-token"
-                                , onInput HandleOverrideTokenInput
-                                , value model.overrideToken
-                                , placeholder tokenPlaceholder
+                                        else
+                                            ""
+                                    , id "override-token"
+                                    , onInput HandleOverrideTokenInput
+                                    , value model.overrideToken
+                                    , placeholder tokenPlaceholder
+                                    ]
+                                    []
                                 ]
-                                []
+                            , a [ class linkText, onClick OpenToken ] [ text "Get Token" ]
                             ]
-                        , a [ class linkText, onClick OpenToken ] [ text "Get Token" ]
                         ]
-                    , label [ class "flex space-x-1 items-center", for "override-ttl" ]
-                        [ span [ class "text-xs font-medium" ] [ text "Override TTL" ]
-                        ]
-                    , div [ class "flex space-x-1" ]
-                        [ div [ class radioButtonContainer ]
-                            [ input [ type_ "radio", id "ttl-short", name "override-ttl", checked <| model.ttlLength == ttlConfig.short.length, onCheck (\_ -> SetTtl ttlConfig.short.length) ] []
-                            , label [ for "ttl-short" ] [ text "5 min" ]
+                    , div [ class optionContainer ]
+                        [ label [ class "flex space-x-1 items-center", for "override-ttl" ]
+                            [ span [ class "text-xs font-medium" ] [ text "Override Time to Live (TTL)" ]
+                            , span [] [ ttlHelpIcon ]
                             ]
-                        , div [ class radioButtonContainer ]
-                            [ input [ type_ "radio", id "ttl-medium", name "override-ttl", checked <| model.ttlLength == ttlConfig.medium.length, onCheck (\_ -> SetTtl ttlConfig.medium.length) ] []
-                            , label [ for "ttl-medium" ] [ text "1 hour" ]
-                            ]
-                        , div [ class radioButtonContainer ]
-                            [ input [ type_ "radio", id "ttl-long", name "override-ttl", checked <| model.ttlLength == ttlConfig.long.length, onCheck (\_ -> SetTtl ttlConfig.long.length) ] []
-                            , label [ for "ttl-long" ] [ text "24 hours" ]
-                            ]
-                        , div [ class radioButtonContainer ]
-                            [ input [ type_ "radio", id "ttl-max", name "override-ttl", checked <| model.ttlLength == ttlConfig.max.length, onCheck (\_ -> SetTtl ttlConfig.max.length) ] []
-                            , label [ for "ttl-max" ] [ text "30 days (max)" ]
+                        , div [ class "flex space-x-4 items-center" ]
+                            [ ttlRadioOption ttlConfig.short
+                            , ttlRadioOption ttlConfig.medium
+                            , ttlRadioOption ttlConfig.long
+                            , ttlRadioOption ttlConfig.max
                             ]
                         ]
                     ]
