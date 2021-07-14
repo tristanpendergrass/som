@@ -4,8 +4,8 @@ import Browser
 import Browser.Dom
 import FeatherIcons
 import Html exposing (Html, a, button, div, form, h1, h2, input, label, li, option, select, span, text, ul)
-import Html.Attributes exposing (checked, class, classList, disabled, for, id, placeholder, selected, style, type_, value)
-import Html.Events exposing (onBlur, onCheck, onClick, onInput, onSubmit)
+import Html.Attributes exposing (class, classList, disabled, for, id, placeholder, selected, style, type_, value)
+import Html.Events exposing (onBlur, onClick, onInput, onSubmit)
 import Json.Decode as D
 import Json.Encode as E
 import Json.Encode.Extra
@@ -90,6 +90,14 @@ type alias Override =
     , feature : Feature
     , variantSelection : VariantSelection
     , customVariantText : String
+    }
+
+
+type alias LegacyOverride =
+    { id : Id
+    , feature : Feature
+    , variantSelection : VariantSelection
+    , customVariantText : String
     , isSelected : Bool
     }
 
@@ -142,24 +150,51 @@ init ( initialBrowserUrl, localStorageData ) =
 
         overrideDecoder : D.Decoder Override
         overrideDecoder =
-            D.map5 Override
+            D.map4 Override
+                (D.field "id" D.int)
+                (D.field "feature" D.string)
+                (D.field "variantSelection" (D.map variantSelectionFromString D.string))
+                (D.field "customVariantText" D.string)
+
+        legacyOverrideDecoder : D.Decoder LegacyOverride
+        legacyOverrideDecoder =
+            D.map5 LegacyOverride
                 (D.field "id" D.int)
                 (D.field "feature" D.string)
                 (D.field "variantSelection" (D.map variantSelectionFromString D.string))
                 (D.field "customVariantText" D.string)
                 (D.field "isSelected" D.bool)
 
-        activeOverrides : List Override
-        activeOverrides =
-            D.decodeValue (D.field "overrides" (D.list overrideDecoder)) localStorageData
-                |> Result.map (List.filter .isSelected)
-                |> Result.withDefault []
+        legacyToNew : LegacyOverride -> Override
+        legacyToNew { id, feature, variantSelection, customVariantText } =
+            { id = id, feature = feature, variantSelection = variantSelection, customVariantText = customVariantText }
 
-        inactiveOverrides : List Override
-        inactiveOverrides =
-            D.decodeValue (D.field "overrides" (D.list overrideDecoder)) localStorageData
-                |> Result.map (List.filter (.isSelected >> not))
-                |> Result.withDefault []
+        overridesFromLegacyOverrides : List LegacyOverride -> ( List Override, List Override )
+        overridesFromLegacyOverrides legacyOverrides =
+            let
+                newActiveOverrides =
+                    legacyOverrides
+                        |> List.filter .isSelected
+                        |> List.map legacyToNew
+
+                newInactiveOverrides =
+                    legacyOverrides
+                        |> List.filter (.isSelected >> not)
+                        |> List.map legacyToNew
+            in
+            ( newActiveOverrides, newInactiveOverrides )
+
+        legacyOverridesDecoder : D.Decoder ( List Override, List Override )
+        legacyOverridesDecoder =
+            D.map overridesFromLegacyOverrides (D.field "overrides" (D.list legacyOverrideDecoder))
+
+        overridesDecoder : D.Decoder ( List Override, List Override )
+        overridesDecoder =
+            D.map2 Tuple.pair (D.field "activeOverrides" (D.list overrideDecoder)) (D.field "inactiveOverrides" (D.list overrideDecoder))
+
+        ( activeOverrides, inactiveOverrides ) =
+            D.decodeValue (D.oneOf [ legacyOverridesDecoder, overridesDecoder ]) localStorageData
+                |> Result.withDefault ( [], [] )
 
         archivedOverrides : List Override
         archivedOverrides =
@@ -214,18 +249,18 @@ encodeModel : Model -> E.Value
 encodeModel model =
     let
         overrideToJson : Override -> E.Value
-        overrideToJson { id, feature, variantSelection, customVariantText, isSelected } =
+        overrideToJson { id, feature, variantSelection, customVariantText } =
             E.object
                 [ ( "id", E.int id )
                 , ( "feature", E.string feature )
                 , ( "variantSelection", E.string (variantSelectionToString variantSelection) )
                 , ( "customVariantText", E.string customVariantText )
-                , ( "isSelected", E.bool isSelected )
                 ]
     in
     E.object
         [ ( "nonce", E.int model.nonce )
-        , ( "overrides", E.list overrideToJson (List.concat [ model.activeOverrides, model.inactiveOverrides ]) )
+        , ( "activeOverrides", E.list overrideToJson model.activeOverrides )
+        , ( "inactiveOverrides", E.list overrideToJson model.inactiveOverrides )
         , ( "archivedOverrides", E.list overrideToJson model.archivedOverrides )
         , ( "overrideToken", E.string model.overrideToken )
         , ( "tokenCreatedAt", Json.Encode.Extra.maybe (Time.posixToMillis >> E.int) model.tokenCreatedAt )
@@ -238,7 +273,6 @@ makeUrl token overrides oldUrl =
         applyOverrides : List QueryParam -> List QueryParam
         applyOverrides oldQueryParams =
             overrides
-                |> List.filter .isSelected
                 |> List.foldl
                     (\override ->
                         \accumulator ->
@@ -384,12 +418,13 @@ update msg model =
             let
                 newOverride : Override
                 newOverride =
-                    { override | variantSelection = variantSelectionFromString selection, isSelected = True }
+                    { override | variantSelection = variantSelectionFromString selection }
 
                 newModel : Model
                 newModel =
                     model
-                        |> replaceOverride override newOverride
+                        |> removeOverride override
+                        |> addActiveOverride newOverride
             in
             ( newModel, sendToLocalStorage <| encodeModel newModel )
 
@@ -402,7 +437,7 @@ update msg model =
                     let
                         newUrl : Url
                         newUrl =
-                            makeUrl model.overrideToken (List.concat [ model.activeOverrides, model.inactiveOverrides ]) oldUrl
+                            makeUrl model.overrideToken model.activeOverrides oldUrl
                     in
                     ( model, sendUrl <| Url.toString newUrl )
 
@@ -475,15 +510,13 @@ update msg model =
             let
                 newOverride : Override
                 newOverride =
-                    Override model.nonce model.feature OnVariant "" True
-
-                newActiveOverrides : List Override
-                newActiveOverrides =
-                    newOverride :: model.activeOverrides
+                    Override model.nonce model.feature OnVariant ""
 
                 newModel : Model
                 newModel =
-                    { model | nonce = model.nonce + 1, activeOverrides = newActiveOverrides, feature = "" }
+                    model
+                        |> addActiveOverride newOverride
+                        |> (\oldModel -> { oldModel | nonce = model.nonce + 1, feature = "" })
             in
             ( newModel, sendToLocalStorage <| encodeModel newModel )
 
@@ -687,12 +720,12 @@ renderAddOverride model =
         ]
 
 
-renderOverride : FeatureEditState -> Override -> Html Msg
-renderOverride featureEditState override =
+renderOverride : Bool -> FeatureEditState -> Override -> Html Msg
+renderOverride isActive featureEditState override =
     let
         fadeIfInactive =
             class <|
-                if override.isSelected then
+                if isActive then
                     ""
 
                 else
@@ -760,9 +793,6 @@ renderOverride featureEditState override =
                 ]
                 []
 
-        selectionCheckbox =
-            input [ type_ "checkbox", onCheck <| ToggleSelectOverride override, checked <| override.isSelected ] []
-
         -- hard coding this value since setting both divs to flex-grow:1 wasn't working for some reason
         halfWidth =
             177
@@ -779,10 +809,10 @@ renderOverride featureEditState override =
                     "bg-yellow-100"
     in
     div [ class "flex items-center space-x-1" ]
-        [ selectionCheckbox
+        [ editButton
         , editButton
         , div [ class "flex-grow flex justify-between" ]
-            [ div [ classList [ ( titleColor, override.isSelected ) ], style "width" (String.fromInt halfWidth ++ "px") ] [ labelOrInput ]
+            [ div [ classList [ ( titleColor, isActive ) ], style "width" (String.fromInt halfWidth ++ "px") ] [ labelOrInput ]
             , div [ fadeIfInactive ] [ text ":" ]
             , div
                 [ class "flex justify-end space-x-1"
@@ -949,13 +979,13 @@ view model =
                         , div []
                             (model.activeOverrides
                                 |> List.filter (.feature >> matchString model.featureFilter)
-                                |> List.map (renderOverride model.featureEditState)
+                                |> List.map (renderOverride True model.featureEditState)
                             )
                         , div [] [ text "Inactive Overrides" ]
                         , div []
                             (model.inactiveOverrides
                                 |> List.filter (.feature >> matchString model.featureFilter)
-                                |> List.map (renderOverride model.featureEditState)
+                                |> List.map (renderOverride False model.featureEditState)
                             )
                         ]
                     )
