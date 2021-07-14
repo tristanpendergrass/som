@@ -67,6 +67,11 @@ variantSelectionFromString value =
             OffVariant
 
 
+legacyToNew : LegacyOverride -> Override
+legacyToNew { id, feature, variantSelection, customVariantText } =
+    { id = id, feature = feature, variantSelection = variantSelection, customVariantText = customVariantText }
+
+
 
 -- MODEL
 
@@ -165,10 +170,6 @@ init ( initialBrowserUrl, localStorageData ) =
                 (D.field "customVariantText" D.string)
                 (D.field "isSelected" D.bool)
 
-        legacyToNew : LegacyOverride -> Override
-        legacyToNew { id, feature, variantSelection, customVariantText } =
-            { id = id, feature = feature, variantSelection = variantSelection, customVariantText = customVariantText }
-
         overridesFromLegacyOverrides : List LegacyOverride -> ( List Override, List Override )
         overridesFromLegacyOverrides legacyOverrides =
             let
@@ -192,6 +193,7 @@ init ( initialBrowserUrl, localStorageData ) =
         overridesDecoder =
             D.map2 Tuple.pair (D.field "activeOverrides" (D.list overrideDecoder)) (D.field "inactiveOverrides" (D.list overrideDecoder))
 
+        -- We have to use oneOf here to try two different decoders because some clients will have the old format of `overrides` in local storage instead of the current format `(activeOverrides, inactiveOverrides)`
         ( activeOverrides, inactiveOverrides ) =
             D.decodeValue (D.oneOf [ legacyOverridesDecoder, overridesDecoder ]) localStorageData
                 |> Result.withDefault ( [], [] )
@@ -778,6 +780,25 @@ renderOverride isActive featureEditState override =
                     |> FeatherIcons.toHtml []
                 ]
 
+        toggleButton =
+            let
+                icon =
+                    if isActive then
+                        FeatherIcons.cornerLeftDown
+
+                    else
+                        FeatherIcons.cornerRightUp
+            in
+            button
+                [ class iconButton
+                , onClick (ToggleSelectOverride override (not isActive))
+                ]
+                [ icon
+                    |> FeatherIcons.withSize 12
+                    |> FeatherIcons.withClass "text-blue-500 group-hover:text-blue-800"
+                    |> FeatherIcons.toHtml []
+                ]
+
         customVariantInput =
             let
                 hideInput : Bool
@@ -809,10 +830,10 @@ renderOverride isActive featureEditState override =
                     "bg-yellow-100"
     in
     div [ class "flex items-center space-x-1" ]
-        [ editButton
-        , editButton
+        [ toggleButton
         , div [ class "flex-grow flex justify-between" ]
-            [ div [ classList [ ( titleColor, isActive ) ], style "width" (String.fromInt halfWidth ++ "px") ] [ labelOrInput ]
+            -- [ div [ classList [ ( titleColor, isActive ) ], style "width" (String.fromInt halfWidth ++ "px") ] [ labelOrInput ]
+            [ div [ style "width" (String.fromInt halfWidth ++ "px") ] [ labelOrInput ]
             , div [ fadeIfInactive ] [ text ":" ]
             , div
                 [ class "flex justify-end space-x-1"
@@ -821,7 +842,7 @@ renderOverride isActive featureEditState override =
                 ]
                 [ customVariantInput
                 , select
-                    [ onInput (HandleVariantSelectionInput override) ]
+                    [ onInput (HandleVariantSelectionInput override), classList [ ( titleColor, isActive ) ] ]
                     [ option [ value "OffVariant", selected (override.variantSelection == OffVariant) ] [ text "OFF" ]
                     , option [ value "OnVariant", selected (override.variantSelection == OnVariant) ] [ text "ON" ]
                     , option [ value "CustomVariant", selected (override.variantSelection == CustomVariant) ] [ text "Custom" ]
@@ -957,6 +978,9 @@ view model =
     let
         bodyClasses =
             "flex flex-col h-full w-screen p-2"
+
+        listHeader =
+            "mt-2 mb-1 text-xl"
     in
     case model.activeTab of
         MainTab ->
@@ -967,7 +991,7 @@ view model =
                     [ renderApplyOverridesButton model ]
                 , renderFeatureFilter model
                 , div
-                    [ class "flex-grow overflow-y-auto space-y-0.5" ]
+                    [ class "flex-grow overflow-y-auto " ]
                     (if List.isEmpty model.activeOverrides && List.isEmpty model.inactiveOverrides then
                         [ renderAddOverride model
                         , div [ class "w-full mt-32 text-center" ] [ text "No overrides exist." ]
@@ -975,14 +999,14 @@ view model =
 
                      else
                         [ renderAddOverride model
-                        , div [] [ text "Active Overrides" ]
-                        , div []
+                        , div [ class listHeader ] [ text "Active" ]
+                        , div [ class "space-y-0.5" ]
                             (model.activeOverrides
                                 |> List.filter (.feature >> matchString model.featureFilter)
                                 |> List.map (renderOverride True model.featureEditState)
                             )
-                        , div [] [ text "Inactive Overrides" ]
-                        , div []
+                        , div [ class listHeader ] [ text "Inactive" ]
+                        , div [ class "space-y-0.5" ]
                             (model.inactiveOverrides
                                 |> List.filter (.feature >> matchString model.featureFilter)
                                 |> List.map (renderOverride False model.featureEditState)
