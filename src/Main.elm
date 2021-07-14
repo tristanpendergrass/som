@@ -1135,8 +1135,8 @@ view model =
                         [ FeatherIcons.helpCircle
                             |> FeatherIcons.withSize 16
                             |> FeatherIcons.toHtml []
-                        , div [ class tooltipBlockText, class "w-72" ]
-                            [ span [] [ text "Time to Live (TTL) is the amount of time that a Stormcrow override will stay active once set. The default setting when not using SOM is 5 minutes." ]
+                        , div [ class tooltipBlockText, class "w-64" ]
+                            [ span [] [ text "Time to Live (TTL) is the amount of time that a Stormcrow override will stay active once set." ]
                             ]
                         ]
 
