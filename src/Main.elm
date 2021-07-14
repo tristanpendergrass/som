@@ -688,7 +688,7 @@ tooltipBlockText =
 
 iconButton : String
 iconButton =
-    "icon-button p-1 rounded group focus:outline-none hover:bg-gray-100"
+    "icon-button m-1 rounded group focus:outline-none hover:bg-gray-100"
 
 
 primaryButton : String
@@ -781,21 +781,18 @@ renderOverride isActive featureEditState override =
                 ]
 
         toggleButton =
-            let
-                icon =
-                    if isActive then
-                        FeatherIcons.cornerLeftDown
-
-                    else
-                        FeatherIcons.cornerRightUp
-            in
             button
                 [ class iconButton
+                , class "group relative"
                 , onClick (ToggleSelectOverride override (not isActive))
                 ]
-                [ icon
-                    |> FeatherIcons.withSize 12
-                    |> FeatherIcons.withClass "text-blue-500 group-hover:text-blue-800"
+                [ FeatherIcons.minusCircle
+                    |> FeatherIcons.withSize 16
+                    |> FeatherIcons.withClass "opacity-0 group-hover:opacity-100 text-blue-500 group-hover:text-blue-800"
+                    |> FeatherIcons.toHtml []
+                , FeatherIcons.circle
+                    |> FeatherIcons.withSize 16
+                    |> FeatherIcons.withClass "opacity-100 group-hover:opacity-0 text-blue-500 group-hover:text-blue-800 absolute top-0 left-0 fill-current"
                     |> FeatherIcons.toHtml []
                 ]
 
