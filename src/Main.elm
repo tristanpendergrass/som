@@ -4,8 +4,8 @@ import Browser
 import Browser.Dom
 import FeatherIcons
 import Html exposing (Html, a, button, div, form, h1, h2, input, label, li, option, select, span, text, ul)
-import Html.Attributes exposing (class, classList, disabled, for, id, placeholder, selected, style, type_, value)
-import Html.Events exposing (onBlur, onClick, onInput, onSubmit)
+import Html.Attributes exposing (checked, class, classList, disabled, for, id, name, placeholder, selected, style, type_, value)
+import Html.Events exposing (onBlur, onCheck, onClick, onInput, onSubmit)
 import Json.Decode as D
 import Json.Encode as E
 import Json.Encode.Extra
@@ -19,6 +19,72 @@ import Url exposing (Url)
 main : Program ( String, D.Value ) Model Msg
 main =
     Browser.element { init = init, update = update, view = view, subscriptions = subscriptions }
+
+
+type TtlLength
+    = TtlShort
+    | TtlMedium
+    | TtlLong
+    | TtlMax
+
+
+ttlLengthDecoder : D.Decoder TtlLength
+ttlLengthDecoder =
+    D.string
+        |> D.andThen
+            (\ttlLength ->
+                case ttlLength of
+                    "ttlShort" ->
+                        D.succeed TtlShort
+
+                    "ttlMedium" ->
+                        D.succeed TtlMedium
+
+                    "ttlLong" ->
+                        D.succeed TtlLong
+
+                    "ttlMax" ->
+                        D.succeed TtlMax
+
+                    _ ->
+                        D.fail "ttlLength not recognized"
+            )
+
+
+ttlLengthEncoder : TtlLength -> E.Value
+ttlLengthEncoder ttlLength =
+    case ttlLength of
+        TtlShort ->
+            E.string "ttlShort"
+
+        TtlMedium ->
+            E.string "ttlMedium"
+
+        TtlLong ->
+            E.string "ttlLong"
+
+        TtlMax ->
+            E.string "ttlMax"
+
+
+type alias TtlConfigObject =
+    { length : TtlLength
+    , seconds : Int
+    }
+
+
+ttlConfig :
+    { short : TtlConfigObject
+    , medium : TtlConfigObject
+    , long : TtlConfigObject
+    , max : TtlConfigObject
+    }
+ttlConfig =
+    { short = { length = TtlShort, seconds = 60 * 5 }
+    , medium = { length = TtlMedium, seconds = 60 * 60 }
+    , long = { length = TtlLong, seconds = 60 * 60 * 24 }
+    , max = { length = TtlMax, seconds = 60 * 60 * 24 * 30 }
+    }
 
 
 {-| Used to filter features by the input of the user
@@ -138,6 +204,7 @@ type alias Model =
     , activeTab : ActiveTab
     , overrideToken : String
     , tokenCreatedAt : Maybe Time.Posix
+    , ttlLength : TtlLength
     }
 
 
@@ -214,6 +281,11 @@ init ( initialBrowserUrl, localStorageData ) =
                 |> Result.map (Time.millisToPosix >> Just)
                 |> Result.withDefault Nothing
 
+        ttlLength : TtlLength
+        ttlLength =
+            D.decodeValue (D.field "ttlLength" ttlLengthDecoder) localStorageData
+                |> Result.withDefault TtlMedium
+
         model : Model
         model =
             { nonce = nonce
@@ -227,6 +299,7 @@ init ( initialBrowserUrl, localStorageData ) =
             , activeTab = MainTab
             , overrideToken = overrideToken
             , tokenCreatedAt = tokenCreatedAt
+            , ttlLength = ttlLength
             }
     in
     ( model
@@ -266,11 +339,12 @@ encodeModel model =
         , ( "archivedOverrides", E.list overrideToJson model.archivedOverrides )
         , ( "overrideToken", E.string model.overrideToken )
         , ( "tokenCreatedAt", Json.Encode.Extra.maybe (Time.posixToMillis >> E.int) model.tokenCreatedAt )
+        , ( "ttlLength", ttlLengthEncoder model.ttlLength )
         ]
 
 
-makeUrl : String -> List Override -> Url -> Url
-makeUrl token overrides oldUrl =
+makeUrl : TtlLength -> String -> List Override -> Url -> Url
+makeUrl ttlLength token overrides oldUrl =
     let
         applyOverrides : List QueryParam -> List QueryParam
         applyOverrides oldQueryParams =
@@ -290,11 +364,25 @@ makeUrl token overrides oldUrl =
                     )
                     oldQueryParams
 
+        queryTtlMillis =
+            case ttlLength of
+                TtlShort ->
+                    ttlConfig.short.seconds
+
+                TtlMedium ->
+                    ttlConfig.medium.seconds
+
+                TtlLong ->
+                    ttlConfig.long.seconds
+
+                TtlMax ->
+                    ttlConfig.max.seconds
+
         newQueryParams =
             QueryParams.fromUrl oldUrl
                 |> List.filter (QueryParams.isStormcrowParam >> not)
                 |> applyOverrides
-                |> QueryParams.setTtl "7200"
+                |> QueryParams.setTtl (String.fromInt queryTtlMillis)
                 |> QueryParams.setToken token
 
         newUrl : Url
@@ -315,6 +403,7 @@ type Msg
     | HandleOverrideTokenInput String
     | SetTokenCreatedAt (Maybe Time.Posix)
     | CheckIfTokenExpired Time.Posix
+    | SetTtl TtlLength
       -- Add Override
     | HandleAddOverrideFeatureInput String
     | HandleAddOverrideSubmit
@@ -439,7 +528,7 @@ update msg model =
                     let
                         newUrl : Url
                         newUrl =
-                            makeUrl model.overrideToken model.activeOverrides oldUrl
+                            makeUrl model.ttlLength model.overrideToken model.activeOverrides oldUrl
                     in
                     ( model, sendUrl <| Url.toString newUrl )
 
@@ -502,6 +591,14 @@ update msg model =
 
                     else
                         model
+            in
+            ( newModel, sendToLocalStorage <| encodeModel newModel )
+
+        SetTtl ttlLength ->
+            let
+                newModel : Model
+                newModel =
+                    { model | ttlLength = ttlLength }
             in
             ( newModel, sendToLocalStorage <| encodeModel newModel )
 
@@ -1033,6 +1130,9 @@ view model =
 
                 tokenPlaceholder =
                     "BQ8OS6e8J... *OR* &override_token=BQ8OS6e8J..."
+
+                radioButtonContainer =
+                    "flex space-x-0.5 cursor-pointer"
             in
             div [ class bodyClasses ]
                 [ renderHeader
@@ -1060,6 +1160,27 @@ view model =
                                 []
                             ]
                         , a [ class linkText, onClick OpenToken ] [ text "Get Token" ]
+                        ]
+                    , label [ class "flex space-x-1 items-center", for "override-ttl" ]
+                        [ span [ class "text-xs font-medium" ] [ text "Override TTL" ]
+                        ]
+                    , div [ class "flex space-x-1" ]
+                        [ div [ class radioButtonContainer ]
+                            [ input [ type_ "radio", id "ttl-short", name "override-ttl", checked <| model.ttlLength == ttlConfig.short.length, onCheck (\_ -> SetTtl ttlConfig.short.length) ] []
+                            , label [ for "ttl-short" ] [ text "5 min" ]
+                            ]
+                        , div [ class radioButtonContainer ]
+                            [ input [ type_ "radio", id "ttl-medium", name "override-ttl", checked <| model.ttlLength == ttlConfig.medium.length, onCheck (\_ -> SetTtl ttlConfig.medium.length) ] []
+                            , label [ for "ttl-medium" ] [ text "1 hour" ]
+                            ]
+                        , div [ class radioButtonContainer ]
+                            [ input [ type_ "radio", id "ttl-long", name "override-ttl", checked <| model.ttlLength == ttlConfig.long.length, onCheck (\_ -> SetTtl ttlConfig.long.length) ] []
+                            , label [ for "ttl-long" ] [ text "24 hours" ]
+                            ]
+                        , div [ class radioButtonContainer ]
+                            [ input [ type_ "radio", id "ttl-max", name "override-ttl", checked <| model.ttlLength == ttlConfig.max.length, onCheck (\_ -> SetTtl ttlConfig.max.length) ] []
+                            , label [ for "ttl-max" ] [ text "30 days (max)" ]
+                            ]
                         ]
                     ]
                 , renderFooter
