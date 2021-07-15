@@ -89,6 +89,22 @@ ttlConfig =
     }
 
 
+queryTtlSeconds : TtlLength -> Int
+queryTtlSeconds ttlLength =
+    case ttlLength of
+        TtlShort ->
+            ttlConfig.short.seconds
+
+        TtlMedium ->
+            ttlConfig.medium.seconds
+
+        TtlLong ->
+            ttlConfig.long.seconds
+
+        TtlMax ->
+            ttlConfig.max.seconds
+
+
 {-| Used to filter features by the input of the user
 -}
 matchString : String -> String -> Bool
@@ -322,6 +338,9 @@ port sendToLocalStorage : E.Value -> Cmd msg
 port createTab : String -> Cmd msg
 
 
+port writeToClipboard : String -> Cmd msg
+
+
 encodeModel : Model -> E.Value
 encodeModel model =
     let
@@ -345,46 +364,47 @@ encodeModel model =
         ]
 
 
+applyOverrides : List Override -> List QueryParam -> List QueryParam
+applyOverrides overrides oldQueryParams =
+    overrides
+        |> List.foldl
+            (\override ->
+                \accumulator ->
+                    case override.variantSelection of
+                        OnVariant ->
+                            QueryParams.applyOverride override.feature "ON" accumulator
+
+                        OffVariant ->
+                            QueryParams.applyOverride override.feature "OFF" accumulator
+
+                        CustomVariant ->
+                            QueryParams.applyOverride override.feature override.customVariantText accumulator
+            )
+            oldQueryParams
+
+
+makeQueryString : TtlLength -> String -> List Override -> String
+makeQueryString ttlLength token overrides =
+    let
+        newQueryParams =
+            []
+                |> applyOverrides overrides
+                |> QueryParams.setTtl (String.fromInt (queryTtlSeconds ttlLength))
+                |> QueryParams.setToken token
+    in
+    QueryParams.toString newQueryParams
+        |> Maybe.map (\str -> "?" ++ str)
+        |> Maybe.withDefault ""
+
+
 makeUrl : TtlLength -> String -> List Override -> Url -> Url
 makeUrl ttlLength token overrides oldUrl =
     let
-        applyOverrides : List QueryParam -> List QueryParam
-        applyOverrides oldQueryParams =
-            overrides
-                |> List.foldl
-                    (\override ->
-                        \accumulator ->
-                            case override.variantSelection of
-                                OnVariant ->
-                                    QueryParams.applyOverride override.feature "ON" accumulator
-
-                                OffVariant ->
-                                    QueryParams.applyOverride override.feature "OFF" accumulator
-
-                                CustomVariant ->
-                                    QueryParams.applyOverride override.feature override.customVariantText accumulator
-                    )
-                    oldQueryParams
-
-        queryTtlMillis =
-            case ttlLength of
-                TtlShort ->
-                    ttlConfig.short.seconds
-
-                TtlMedium ->
-                    ttlConfig.medium.seconds
-
-                TtlLong ->
-                    ttlConfig.long.seconds
-
-                TtlMax ->
-                    ttlConfig.max.seconds
-
         newQueryParams =
             QueryParams.fromUrl oldUrl
                 |> List.filter (QueryParams.isStormcrowParam >> not)
-                |> applyOverrides
-                |> QueryParams.setTtl (String.fromInt queryTtlMillis)
+                |> applyOverrides overrides
+                |> QueryParams.setTtl (String.fromInt (queryTtlSeconds ttlLength))
                 |> QueryParams.setToken token
 
         newUrl : Url
@@ -406,6 +426,7 @@ type Msg
     | SetTokenCreatedAt (Maybe Time.Posix)
     | CheckIfTokenExpired Time.Posix
     | SetTtl TtlLength
+    | Export
       -- Add Override
     | HandleAddOverrideFeatureInput String
     | HandleAddOverrideSubmit
@@ -604,6 +625,9 @@ update msg model =
                     { model | ttlLength = ttlLength }
             in
             ( newModel, sendToLocalStorage <| encodeModel newModel )
+
+        Export ->
+            ( model, writeToClipboard <| makeQueryString model.ttlLength model.overrideToken model.activeOverrides )
 
         HandleAddOverrideFeatureInput feature ->
             ( { model | feature = feature }, Cmd.none )
@@ -1067,18 +1091,29 @@ renderApplyOverridesButton model =
         isDisabled =
             List.isEmpty model.activeOverrides
     in
-    button
-        [ class primaryButton
-        , classList [ ( primaryButtonDisabled, isDisabled ) ]
-        , onClick ApplyOverrides
-        , disabled isDisabled
-        ]
-        [ div [ class "flex items-center space-x-1" ]
-            [ FeatherIcons.zap
-                |> FeatherIcons.withClass "inline-block"
-                |> FeatherIcons.withSize 16
-                |> FeatherIcons.toHtml []
-            , span [ class "uppercase" ] [ text "Override" ]
+    div [ class "flex items-center space-x-1" ]
+        [ button
+            [ class primaryButton
+            , classList [ ( primaryButtonDisabled, isDisabled ) ]
+            , onClick ApplyOverrides
+            , disabled isDisabled
+            ]
+            [ div [ class "flex items-center space-x-1" ]
+                [ FeatherIcons.zap
+                    |> FeatherIcons.withClass "inline-block"
+                    |> FeatherIcons.withSize 16
+                    |> FeatherIcons.toHtml []
+                , span [ class "uppercase" ] [ text "Override" ]
+                ]
+            ]
+        , div [ class tooltip ]
+            [ button [ class iconButton, classList [ ( "invisible", List.isEmpty model.activeOverrides ) ], onClick Export ]
+                [ FeatherIcons.clipboard
+                    |> FeatherIcons.withSize 16
+                    |> FeatherIcons.withClass "text-blue-500 hover:text-blue-700"
+                    |> FeatherIcons.toHtml []
+                ]
+            , div [ class tooltipText, class "-ml-16" ] [ text "Paste to clipboard" ]
             ]
         ]
 
@@ -1103,7 +1138,7 @@ view model =
             "flex flex-col h-full w-screen p-2"
 
         listHeader =
-            "mt-4 px-0.5 flex justify-between items-end width-100"
+            "mt-4 flex justify-between items-end width-100"
     in
     case model.activeTab of
         MainTab ->
@@ -1123,12 +1158,12 @@ view model =
                      else
                         [ renderAddOverride model
                         , div [ class listHeader ]
-                            [ span [] [] -- placeholder so justify-between on parent will cause button below to be pushed to the right side
+                            [ span [] [] -- placeholder so justify-between on parent will cause buttons below to be pushed to the right side
                             , div [ class tooltip ]
                                 [ button [ class iconButton, classList [ ( "invisible", List.length model.activeOverrides <= 1 ) ], onClick DeactivateAllOverrides ]
-                                    [ FeatherIcons.xCircle
-                                        |> FeatherIcons.withSize 12
-                                        |> FeatherIcons.withClass "text-red-500 hover:text-red-700"
+                                    [ FeatherIcons.xSquare
+                                        |> FeatherIcons.withSize 16
+                                        |> FeatherIcons.withClass "text-gray-500 hover:text-red-700"
                                         |> FeatherIcons.toHtml []
                                     ]
                                 , div [ class tooltipText, class "-ml-20" ] [ text "Deactivate All" ]

@@ -20,4 +20,8 @@ chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
   app.ports.createTab.subscribe(url => {
     chrome.tabs.create({url: url})
   })
+
+  app.ports.writeToClipboard.subscribe(data => {
+    navigator.clipboard.writeText(data);
+  })
 });

@@ -9,7 +9,7 @@
     "default_popup": "dist/index.html"
   },
 
-  "permissions": ["tabs"],
+  "permissions": ["tabs", "clipboardWrite"],
 
   "icons": {
     "16": "cloud_16.png",
