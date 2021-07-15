@@ -1120,13 +1120,16 @@ renderApplyOverridesButton model =
 
 renderFooter : Html Msg
 renderFooter =
-    div [ class "flex justify-end items-center space-x-1" ]
-        [ div [ class "text-gray-500" ] [ text "v0.1" ]
-        , button [ class iconButton, class "flex items-center space-x-1 py-0", onClick OpenGithub ]
-            [ div [] [ text "GitHub" ]
-            , FeatherIcons.externalLink
-                |> FeatherIcons.withSize 12
-                |> FeatherIcons.toHtml []
+    div [ class "flex justify-between items-center" ]
+        [ div [ class "text-gray-500" ] [ text "Feedback? Message @tristanp" ]
+        , div [ class "flex items-center space-x-1" ]
+            [ div [ class "text-gray-500" ] [ text "v2.0" ]
+            , button [ class iconButton, class "flex items-center space-x-1 py-0", onClick OpenGithub ]
+                [ div [] [ text "GitHub" ]
+                , FeatherIcons.externalLink
+                    |> FeatherIcons.withSize 12
+                    |> FeatherIcons.toHtml []
+                ]
             ]
         ]
 
