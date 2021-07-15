@@ -416,6 +416,7 @@ type Msg
     | HandleFeatureDraftInput String
     | CancelFeatureEdit
     | ToggleSelectOverride Override Bool
+    | DeactivateAllOverrides
     | Archive Override
     | Unarchive Override
     | Delete Override
@@ -731,6 +732,17 @@ update msg model =
                     model
                         |> removeOverride override
                         |> addToList override
+            in
+            ( newModel, sendToLocalStorage <| encodeModel newModel )
+
+        DeactivateAllOverrides ->
+            let
+                newModel : Model
+                newModel =
+                    { model
+                        | activeOverrides = []
+                        , inactiveOverrides = List.concat [ model.activeOverrides, model.inactiveOverrides ]
+                    }
             in
             ( newModel, sendToLocalStorage <| encodeModel newModel )
 
@@ -1059,7 +1071,7 @@ view model =
 
         listHeaderClasses =
             classList
-                [ ( "mt-2 mb-1 text-xl", True )
+                [ ( "mt-2 mb-1 flex justify-between items-end", True )
                 , ( "hidden", List.isEmpty model.inactiveOverrides )
                 ]
     in
@@ -1080,13 +1092,25 @@ view model =
 
                      else
                         [ renderAddOverride model
-                        , div [ listHeaderClasses ] [ text "Active" ]
+                        , div [ listHeaderClasses ]
+                            [ div [ class "flex items-center space-x-1" ]
+                                [ button [ class iconButton, classList [ ( "invisible", List.isEmpty model.activeOverrides ) ], onClick DeactivateAllOverrides ]
+                                    [ FeatherIcons.minusCircle
+                                        |> FeatherIcons.withSize 16
+                                        |> FeatherIcons.withClass "text-red-500 hover:text-red-700"
+                                        |> FeatherIcons.toHtml []
+                                    ]
+                                , span [ class "text-xl" ] [ text "Active" ]
+                                ]
+                            ]
                         , div [ class "space-y-0.5" ]
                             (model.activeOverrides
                                 |> List.filter (.feature >> matchString model.featureFilter)
                                 |> List.map (renderOverride True model.featureEditState)
                             )
-                        , div [ listHeaderClasses ] [ text "Inactive" ]
+                        , div [ listHeaderClasses ]
+                            [ span [ class "text-xl" ] [ text "Inactive" ]
+                            ]
                         , div [ class "space-y-0.5" ]
                             (model.inactiveOverrides
                                 |> List.filter (.feature >> matchString model.featureFilter)
