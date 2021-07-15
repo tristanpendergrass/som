@@ -852,7 +852,7 @@ renderAddOverride model =
                 |> FeatherIcons.toHtml []
             ]
         , form [ onSubmit HandleAddOverrideSubmit, class "flex-grow" ]
-            [ input [ class underlineInput, value model.feature, onInput HandleAddOverrideFeatureInput, placeholder "New Feature Name" ] []
+            [ input [ class underlineInput, value model.feature, onInput HandleAddOverrideFeatureInput, placeholder "my_new_feature" ] []
             ]
         ]
 
