@@ -770,7 +770,7 @@ featureInputId =
 
 underlineInput : String
 underlineInput =
-    "ml-0 mt-0 block w-full px-0.5 border-0 border-b-2 border-gray-200 focus:outline-none focus:ring-0 focus:border-gray-900"
+    "ml-0 mt-0 block w-full border-0 border-b-2 border-gray-200 focus:outline-none focus:ring-0 focus:border-gray-900"
 
 
 tooltip : String
@@ -784,7 +784,7 @@ tooltip =
 
 tooltipContent : String
 tooltipContent =
-    "tooltip-text absolute z-50 bg-gray-900 text-gray-100 text-sm py-1 px-2 rounded-sm transition duration-200 delay-300"
+    "tooltip-text absolute z-50 bg-gray-900 text-gray-100 text-sm py-1 px-2 rounded-sm transition duration-200 delay-500"
 
 
 tooltipText : String
@@ -871,23 +871,33 @@ renderOverride isActive featureEditState override =
                         featureText
 
         toggleButton =
-            button
-                [ class iconButton
-                , class "opacity-0 group-hover:opacity-100"
-                , onClick (ToggleSelectOverride override (not isActive))
-                ]
-                [ if isActive then
-                    FeatherIcons.minusCircle
-                        |> FeatherIcons.withSize 16
-                        |> FeatherIcons.withClass "opacity-0 group-hover:opacity-100 text-red-500"
-                        |> FeatherIcons.toHtml []
+            let
+                justButton =
+                    button
+                        [ class iconButton
+                        , onClick (ToggleSelectOverride override (not isActive))
+                        ]
+                        [ if isActive then
+                            FeatherIcons.x
+                                |> FeatherIcons.withSize 12
+                                |> FeatherIcons.withClass "text-red-500 hover:text-red-700"
+                                |> FeatherIcons.toHtml []
 
-                  else
-                    FeatherIcons.plusCircle
-                        |> FeatherIcons.withSize 16
-                        |> FeatherIcons.withClass "opacity-0 group-hover:opacity-100 text-blue-500"
-                        |> FeatherIcons.toHtml []
-                ]
+                          else
+                            FeatherIcons.plus
+                                |> FeatherIcons.withSize 12
+                                |> FeatherIcons.withClass "text-blue-500 hover:text-blue-700"
+                                |> FeatherIcons.toHtml []
+                        ]
+            in
+            if isActive then
+                justButton
+
+            else
+                div [ class tooltip ]
+                    [ justButton
+                    , div [ class tooltipText, class "-ml-12" ] [ text "Reactivate" ]
+                    ]
 
         customVariantInput =
             let
@@ -908,6 +918,10 @@ renderOverride isActive featureEditState override =
         halfWidth =
             177
 
+        -- hard coding this value since setting both divs to flex-grow:1 wasn't working for some reason
+        fullWidth =
+            354
+
         titleColor =
             case override.variantSelection of
                 OffVariant ->
@@ -918,11 +932,19 @@ renderOverride isActive featureEditState override =
 
                 CustomVariant ->
                     "bg-yellow-100"
-    in
-    div [ class "flex items-center space-x-1 group" ]
-        [ toggleButton
-        , div [ class "flex-grow flex justify-between" ]
-            -- [ div [ classList [ ( titleColor, isActive ) ], style "width" (String.fromInt halfWidth ++ "px") ] [ labelOrInput ]
+
+        archiveButton =
+            div [ class tooltip ]
+                [ button [ class iconButton, onClick (Archive override) ]
+                    [ FeatherIcons.archive
+                        |> FeatherIcons.withSize 12
+                        |> FeatherIcons.withClass "text-red-500"
+                        |> FeatherIcons.toHtml []
+                    ]
+                , div [ class tooltipText, class "-ml-12" ] [ text "Archive" ]
+                ]
+
+        activeRowContent =
             [ div [ style "width" (String.fromInt halfWidth ++ "px") ] [ labelOrInput ]
             , div [ fadeIfInactive ] [ text ":" ]
             , div
@@ -939,15 +961,26 @@ renderOverride isActive featureEditState override =
                     ]
                 ]
             ]
-        , div [ class tooltip ]
-            [ button [ class iconButton, onClick (Archive override) ]
-                [ FeatherIcons.archive
-                    |> FeatherIcons.withSize 12
-                    |> FeatherIcons.withClass "text-red-500"
-                    |> FeatherIcons.toHtml []
-                ]
-            , div [ class tooltipText, class "-ml-12" ] [ text "Archive" ]
+
+        inactiveRowContent =
+            [ div [ style "width" (String.fromInt fullWidth ++ "px") ] [ featureText ]
             ]
+    in
+    div [ class "flex items-center space-x-1 group border-b border-gray-200 p-0.5" ]
+        [ div [ class "flex-grow flex justify-between" ]
+            (if isActive then
+                activeRowContent
+
+             else
+                inactiveRowContent
+            )
+        , div [ class "flex items-center space-x-0.5" ]
+            (if isActive then
+                [ toggleButton ]
+
+             else
+                [ toggleButton, archiveButton ]
+            )
         ]
 
 
@@ -1069,11 +1102,8 @@ view model =
         bodyClasses =
             "flex flex-col h-full w-screen p-2"
 
-        listHeaderClasses =
-            classList
-                [ ( "mt-2 mb-1 flex justify-between items-end", True )
-                , ( "hidden", List.isEmpty model.inactiveOverrides )
-                ]
+        listHeader =
+            "mt-4 px-0.5 flex justify-between items-end width-100"
     in
     case model.activeTab of
         MainTab ->
@@ -1084,7 +1114,7 @@ view model =
                     [ renderApplyOverridesButton model ]
                 , renderFeatureFilter model
                 , div
-                    [ class "flex-grow overflow-y-auto " ]
+                    [ class "flex-grow" ]
                     (if List.isEmpty model.activeOverrides && List.isEmpty model.inactiveOverrides then
                         [ renderAddOverride model
                         , div [ class "w-full mt-32 text-center" ] [ text "No overrides exist." ]
@@ -1092,15 +1122,16 @@ view model =
 
                      else
                         [ renderAddOverride model
-                        , div [ listHeaderClasses ]
-                            [ div [ class "flex items-center space-x-1" ]
-                                [ button [ class iconButton, classList [ ( "invisible", List.isEmpty model.activeOverrides ) ], onClick DeactivateAllOverrides ]
-                                    [ FeatherIcons.minusCircle
-                                        |> FeatherIcons.withSize 16
+                        , div [ class listHeader ]
+                            [ span [] [] -- placeholder so justify-between on parent will cause button below to be pushed to the right side
+                            , div [ class tooltip ]
+                                [ button [ class iconButton, classList [ ( "invisible", List.length model.activeOverrides <= 1 ) ], onClick DeactivateAllOverrides ]
+                                    [ FeatherIcons.xCircle
+                                        |> FeatherIcons.withSize 12
                                         |> FeatherIcons.withClass "text-red-500 hover:text-red-700"
                                         |> FeatherIcons.toHtml []
                                     ]
-                                , span [ class "text-xl" ] [ text "Active" ]
+                                , div [ class tooltipText, class "-ml-20" ] [ text "Deactivate All" ]
                                 ]
                             ]
                         , div [ class "space-y-0.5" ]
@@ -1108,8 +1139,11 @@ view model =
                                 |> List.filter (.feature >> matchString model.featureFilter)
                                 |> List.map (renderOverride True model.featureEditState)
                             )
-                        , div [ listHeaderClasses ]
-                            [ span [ class "text-xl" ] [ text "Inactive" ]
+                        , div
+                            [ class listHeader
+                            , classList [ ( "hidden", List.isEmpty model.inactiveOverrides ) ]
+                            ]
+                            [ span [ class "text-lg" ] [ text "Inactive" ]
                             ]
                         , div [ class "space-y-0.5" ]
                             (model.inactiveOverrides
