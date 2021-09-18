@@ -10,6 +10,7 @@ import Json.Decode as D
 import Json.Encode as E
 import Json.Encode.Extra
 import List
+import Parser exposing (Parser)
 import QueryParams exposing (QueryParam)
 import Task
 import Time
@@ -503,13 +504,27 @@ addActiveOverride override model =
     { model | activeOverrides = override :: model.activeOverrides }
 
 
+addActiveOverrides : List Override -> Model -> Model
+addActiveOverrides overrides model =
+    { model | activeOverrides = List.concat [ overrides, model.activeOverrides ] }
+
+
 addInactiveOverride : Override -> Model -> Model
 addInactiveOverride override model =
     { model | inactiveOverrides = override :: model.inactiveOverrides }
 
 
+featureParser : Int -> Parser ( Int, List Override )
+featureParser nonce =
+    Debug.todo "Implement"
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
+    let
+        noOp =
+            ( model, Cmd.none )
+    in
     case msg of
         SetBrowserUrl url ->
             ( { model | browserUrl = Url.fromString url }, Cmd.none )
@@ -633,18 +648,19 @@ update msg model =
             ( { model | feature = feature }, Cmd.none )
 
         HandleAddOverrideSubmit ->
-            let
-                newOverride : Override
-                newOverride =
-                    Override model.nonce model.feature OnVariant ""
+            case Parser.run (featureParser model.nonce) model.feature of
+                Err _ ->
+                    noOp
 
-                newModel : Model
-                newModel =
-                    model
-                        |> addActiveOverride newOverride
-                        |> (\oldModel -> { oldModel | nonce = model.nonce + 1, feature = "" })
-            in
-            ( newModel, sendToLocalStorage <| encodeModel newModel )
+                Ok ( newNonce, overrides ) ->
+                    let
+                        newModel : Model
+                        newModel =
+                            model
+                                |> addActiveOverrides overrides
+                                |> (\oldModel -> { oldModel | nonce = newNonce, feature = "" })
+                    in
+                    ( newModel, sendToLocalStorage <| encodeModel newModel )
 
         FocusResult result ->
             -- handle success or failure here
