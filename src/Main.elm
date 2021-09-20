@@ -504,9 +504,47 @@ addActiveOverride override model =
     { model | activeOverrides = override :: model.activeOverrides }
 
 
-addActiveOverrides : List Override -> Model -> Model
-addActiveOverrides overrides model =
-    { model | activeOverrides = List.concat [ overrides, model.activeOverrides ] }
+removeOverrideWithFeature : String -> Model -> Model
+removeOverrideWithFeature removedFeature model =
+    let
+        overrideDoesNotHaveFeature : Override -> Bool
+        overrideDoesNotHaveFeature { feature } =
+            feature /= removedFeature
+    in
+    { model
+        | activeOverrides = List.filter overrideDoesNotHaveFeature model.activeOverrides
+        , inactiveOverrides = List.filter overrideDoesNotHaveFeature model.inactiveOverrides
+    }
+
+
+incrementNonce : Model -> Model
+incrementNonce model =
+    { model | nonce = model.nonce + 1 }
+
+
+createOverride : Int -> String -> String -> Override
+createOverride id featureName value =
+    if String.toUpper value == "ON" then
+        Override id featureName OnVariant ""
+
+    else if String.toUpper value == "OFF" then
+        Override id featureName OffVariant ""
+
+    else
+        Override id featureName CustomVariant value
+
+
+addSubmittedOverride : ( String, String ) -> Model -> Model
+addSubmittedOverride ( featureName, value ) model =
+    model
+        |> removeOverrideWithFeature featureName
+        |> addActiveOverride (createOverride model.nonce featureName value)
+        |> incrementNonce
+
+
+addSubmittedOverrides : List ( String, String ) -> Model -> Model
+addSubmittedOverrides submittedOverrides model =
+    List.foldl addSubmittedOverride model submittedOverrides
 
 
 addInactiveOverride : Override -> Model -> Model
@@ -514,9 +552,25 @@ addInactiveOverride override model =
     { model | inactiveOverrides = override :: model.inactiveOverrides }
 
 
-featureParser : Int -> Parser ( Int, List Override )
-featureParser nonce =
-    Debug.todo "Implement"
+featureParser : Parser (List ( String, String ))
+featureParser =
+    let
+        parseQueryString : Parser (List ( String, String ))
+        parseQueryString =
+            Debug.todo "Implement"
+
+        parseSimpleString : Parser (List ( String, String ))
+        parseSimpleString =
+            Debug.todo "Implement"
+
+        featureValuePairs : Parser (List ( String, String ))
+        featureValuePairs =
+            Parser.oneOf
+                [ parseQueryString
+                , parseSimpleString
+                ]
+    in
+    featureValuePairs
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -648,17 +702,17 @@ update msg model =
             ( { model | feature = feature }, Cmd.none )
 
         HandleAddOverrideSubmit ->
-            case Parser.run (featureParser model.nonce) model.feature of
+            case Parser.run featureParser model.feature of
                 Err _ ->
                     noOp
 
-                Ok ( newNonce, overrides ) ->
+                Ok submittedOverrides ->
                     let
                         newModel : Model
                         newModel =
                             model
-                                |> addActiveOverrides overrides
-                                |> (\oldModel -> { oldModel | nonce = newNonce, feature = "" })
+                                |> addSubmittedOverrides submittedOverrides
+                                |> (\oldModel -> { oldModel | feature = "" })
                     in
                     ( newModel, sendToLocalStorage <| encodeModel newModel )
 
