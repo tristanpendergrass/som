@@ -12,12 +12,11 @@ import Json.Decode as D
 import Json.Encode as E
 import Json.Encode.Extra
 import List
+import ParseUserInput
 import QueryParams exposing (QueryParam)
 import Task
 import Time
 import Url exposing (Url)
-import Url.Parser exposing ((<?>), Parser)
-import Url.Parser.Query
 
 
 main : Program ( String, D.Value ) Model Msg
@@ -581,31 +580,6 @@ addInactiveOverride override model =
 --     featureValuePairs
 
 
-parseQueryString : String -> Maybe (List ( String, String ))
-parseQueryString queryString =
-    let
-        stormcrowOverridesParser : Url.Parser.Query.Parser (List ( String, String ))
-        stormcrowOverridesParser =
-            Url.Parser.Query.custom "stormcrow_override"
-                (List.filterMap
-                    (\value ->
-                        case String.split ":" value of
-                            [ feature, variant ] ->
-                                Just ( feature, variant )
-
-                            _ ->
-                                Nothing
-                    )
-                )
-
-        parser : Parser (List ( String, String ) -> a) a
-        parser =
-            Url.Parser.top <?> stormcrowOverridesParser
-    in
-    Url.fromString ("http://example.com" ++ queryString)
-        |> Maybe.andThen (Url.Parser.parse parser)
-
-
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     let
@@ -736,7 +710,7 @@ update msg model =
 
         HandleAddOverrideSubmit ->
             -- case Parser.run featureParser model.feature of
-            case parseQueryString model.feature of
+            case ParseUserInput.parseUserInput model.feature of
                 Nothing ->
                     noOp
 
