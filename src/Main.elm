@@ -710,19 +710,17 @@ update msg model =
 
         HandleAddOverrideSubmit ->
             -- case Parser.run featureParser model.feature of
-            case ParseUserInput.parseUserInput model.feature of
-                Nothing ->
-                    noOp
+            let
+                submittedOverrides =
+                    ParseUserInput.parseUserInput model.feature
 
-                Just submittedOverrides ->
-                    let
-                        newModel : Model
-                        newModel =
-                            model
-                                |> addSubmittedOverrides submittedOverrides
-                                |> (\oldModel -> { oldModel | feature = "" })
-                    in
-                    ( newModel, sendToLocalStorage <| encodeModel newModel )
+                newModel : Model
+                newModel =
+                    model
+                        |> addSubmittedOverrides submittedOverrides
+                        |> (\oldModel -> { oldModel | feature = "" })
+            in
+            ( newModel, sendToLocalStorage <| encodeModel newModel )
 
         FocusResult result ->
             -- handle success or failure here
