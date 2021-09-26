@@ -5,7 +5,7 @@ import Url.Parser exposing ((<?>), Parser)
 import Url.Parser.Query
 
 
-parseUserInput : String -> Maybe (List ( String, String ))
+parseUserInput : String -> List ( String, String )
 parseUserInput userInput =
     let
         stormcrowOverridesParser : Url.Parser.Query.Parser (List ( String, String ))
@@ -28,3 +28,4 @@ parseUserInput userInput =
     in
     Url.fromString ("http://example.com" ++ userInput)
         |> Maybe.andThen (Url.Parser.parse parser)
+        |> Maybe.withDefault []
