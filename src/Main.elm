@@ -1170,7 +1170,7 @@ renderFooter =
     div [ class "flex justify-between items-center" ]
         [ div [ class "text-gray-500" ] [ text "Feedback? Message @tristanp" ]
         , div [ class "flex items-center space-x-1" ]
-            [ div [ class "text-gray-500" ] [ text "v2.3" ]
+            [ div [ class "text-gray-500" ] [ text "v2.4" ]
             , button [ class iconButton, class "flex items-center space-x-1 py-0", onClick OpenGithub ]
                 [ div [] [ text "GitHub" ]
                 , FeatherIcons.externalLink
