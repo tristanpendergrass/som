@@ -1,6 +1,6 @@
 module ParseUserInputTest exposing (suite)
 
-import Expect exposing (Expectation)
+import Expect
 import ParseUserInput exposing (parseUserInput)
 import Test exposing (..)
 import Url exposing (Url)
@@ -9,34 +9,36 @@ import Url exposing (Url)
 suite : Test
 suite =
     describe "ParseUserInput module"
-        [ skip <|
-            describe "inputs that are a simple string"
-                [ test "single word" <|
-                    \_ ->
-                        Expect.equal
-                            (parseUserInput "foo")
-                            [ ( "foo", "ON" ) ]
-                ]
-        , skip <|
-            describe "inputs that have both feature and variant"
-                [ test "feature and variant separated by ':'" <|
-                    \_ ->
-                        Expect.equal
-                            (parseUserInput "foo:OFF")
-                            [ ( "foo", "OFF" ) ]
-                ]
+        [ describe "inputs that are a simple string"
+            [ test "single word" <|
+                \_ ->
+                    Expect.equal
+                        (parseUserInput "foo")
+                        [ ( "foo", "ON" ) ]
+            , test "word with underscores" <|
+                \_ ->
+                    Expect.equal
+                        (parseUserInput "foo_bar")
+                        [ ( "foo_bar", "ON" ) ]
+            ]
+        , describe "inputs that have both feature and variant"
+            [ test "feature and variant separated by ':'" <|
+                \_ ->
+                    Expect.equal
+                        (parseUserInput "foo:OFF")
+                        [ ( "foo", "OFF" ) ]
+            ]
         , describe "inputs that look like a url"
             [ test "query string input" <|
                 \_ ->
                     Expect.equal
                         (parseUserInput "?stormcrow_override=foo:bar&stormcrow_override=baz:ON")
                         [ ( "foo", "bar" ), ( "baz", "ON" ) ]
-            , skip <|
-                test "query string input without the ? at start" <|
-                    \_ ->
-                        Expect.equal
-                            (parseUserInput "stormcrow_override=foo:bar&stormcrow_override=baz:ON")
-                            [ ( "foo", "bar" ), ( "baz", "ON" ) ]
+            , test "query string input without the ? at start" <|
+                \_ ->
+                    Expect.equal
+                        (parseUserInput "stormcrow_override=foo:bar&stormcrow_override=baz:ON")
+                        [ ( "foo", "bar" ), ( "baz", "ON" ) ]
             , test "invalid query string input" <|
                 \_ ->
                     Expect.equal
