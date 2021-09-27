@@ -1,6 +1,6 @@
 module QueryParamsTest exposing (suite)
 
-import Expect exposing (Expectation)
+import Expect
 import QueryParams exposing (QueryParam)
 import Test exposing (..)
 import Url exposing (Url)

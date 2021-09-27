@@ -3,7 +3,6 @@ module ParseUserInputTest exposing (suite)
 import Expect
 import ParseUserInput exposing (parseUserInput)
 import Test exposing (..)
-import Url exposing (Url)
 
 
 suite : Test

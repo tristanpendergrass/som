@@ -8,6 +8,7 @@ import FeatherIcons
 import Html exposing (Html, a, button, div, form, h1, h2, input, label, li, option, select, span, text, ul)
 import Html.Attributes exposing (checked, class, classList, disabled, for, id, name, placeholder, selected, style, type_, value)
 import Html.Events exposing (onBlur, onCheck, onClick, onInput, onSubmit)
+import Html.Keyed
 import Json.Decode as D
 import Json.Encode as E
 import Json.Encode.Extra
@@ -554,38 +555,8 @@ addInactiveOverride override model =
     { model | inactiveOverrides = override :: model.inactiveOverrides }
 
 
-
--- featureParser : Parser (List ( String, String ))
--- featureParser =
---     let
---         parsePair : String -> ( String, String )
---         parsePair =
---             Debug.todo "Implement"
---         -- parseQueryString : Parser (List ( String, String ))
---         -- parseQueryString =
---         --     Parser.succeed [ ( "foo", "bar" ), ( "baz", "baz" ) ]
---         parseQueryString : Parser (List ( String, String ))
---         parseQueryString =
---             Url.Parser.Query.custom "stormcrow_override" (\strings -> List.map parsePair strings)
---         parseSimpleString : Parser (List ( String, String ))
---         parseSimpleString =
---             Debug.todo "Implement"
---         featureValuePairs : Parser (List ( String, String ))
---         featureValuePairs =
---             Parser.oneOf
---                 [ parseQueryString
---                 -- , parseSimpleString
---                 ]
---     in
---     featureValuePairs
-
-
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    let
-        noOp =
-            ( model, Cmd.none )
-    in
     case msg of
         SetBrowserUrl url ->
             ( { model | browserUrl = Url.fromString url }, Cmd.none )
@@ -1248,10 +1219,14 @@ view model =
                                 , div [ class tooltipText, class "-ml-20" ] [ text "Deactivate All" ]
                                 ]
                             ]
-                        , div [ class "space-y-0.5" ]
+                        , Html.Keyed.node "div"
+                            [ class "space-y-0.5" ]
                             (model.activeOverrides
                                 |> List.filter (.feature >> matchString model.featureFilter)
-                                |> List.map (renderOverride True model.featureEditState)
+                                |> List.map
+                                    (\override ->
+                                        ( String.fromInt override.id, renderOverride True model.featureEditState override )
+                                    )
                             )
                         , div
                             [ class listHeader
