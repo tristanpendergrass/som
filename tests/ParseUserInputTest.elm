@@ -58,5 +58,10 @@ suite =
                     Expect.equal
                         (parseUserInput "https://www.dropbox.com/preview/somestring?other_params=foobar&stormcrow_override=foo:bar")
                         [ ( "foo", "bar" ) ]
+            , test "this full url" <|
+                \_ ->
+                    Expect.equal
+                        (parseUserInput "https://www.dropbox.com/work/Tristan%20Pendergrass?stormcrow_override=foo%3AOFF&stormcrow_override_ttl=3600")
+                        [ ( "foo", "OFF" ) ]
             ]
         ]

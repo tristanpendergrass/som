@@ -16,8 +16,8 @@ parseUserInput userInput =
         [ parseSimpleString userInput
         , parseFeatureVariantPair userInput
         , parseQueryStringInput userInput
-        , parseQueryStringInput ("?" ++ userInput)
         , parseFullUrlInput userInput
+        , parseQueryStringInput ("?" ++ userInput)
         ]
         |> Maybe.withDefault [ ( "dont", "gethere" ) ]
 
