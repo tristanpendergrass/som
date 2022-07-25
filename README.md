@@ -23,6 +23,9 @@ Make any desired changes in /src and just run the following again:
 $ npm run build
 ```
 
+You do not have to go through the "Load unpacked" step from installation again, just close and reopen the extension to see your changes.
+
+
 ## Test
 
 Tests are in /tests. Written using https://github.com/elm-explorations/test.
@@ -31,24 +34,3 @@ Tests are in /tests. Written using https://github.com/elm-explorations/test.
 $ npm test
 $ npm test -- --watch
 ```
-
-## Todos
-
-- [x] Add unit tests for QueryParams.elm (update readme with instructions to run)
-- [x] Add Tailwind CSS library
-- [x] Check it works in firefox
-- [x] Make selected/unselected be a checkbox on left
-- [x] Fix layout of rows
-- [x] Tooltips for feature and variant
-- [x] Add underline for text box for custom variant/feature input
-- [x] Make red/green background color of feature name be dependent on variant and only show when selected
-- [x] Improve experience of editing name: remove accept button, focus on edit
-- [x] Fix unarchive page
-- [x] Make add feature look like an override but with (+) button instead of edit and no other stuff
-- [x] Make apply overrides button disable styles correct and reposition
-- [x] Add github link and version number
-- [ ] Make overload list look better when lots of overrides
-- [ ] Add a way to easily enter override_token (easily get override token?)
-- [ ] Improve styles of select dropdown
-- [ ] Let Enter blur the feature/variant input
-- [x] Make input for editing feature auto focus when edit button clicked https://stackoverflow.com/questions/31901397/how-to-set-focus-on-an-element-in-elm
