@@ -1,8 +1,6 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-/* $SAPPHIRE: #0D2481;
-$HOVER-SAPPHIRE: #1b3398; */
 
 body {
   margin: 0;
@@ -11,7 +9,6 @@ body {
   font-family: "Atlas Grotesk", "AtlasGrotesk", sans-serif;
 }
 
-/*
 .tooltip-text {
   visibility: hidden;
   opacity: 0;
@@ -24,4 +21,4 @@ body {
 
 .icon-button:active {
   background-color: #E5E7EB;
-} */
+}
