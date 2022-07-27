@@ -2,6 +2,7 @@
   "devDependencies": {
     "@parcel/transformer-elm": "^2.6.2",
     "cssnano": "^4.1.10",
+    "daisyui": "^2.20.0",
     "elm": "^0.19.1-5",
     "elm-format": "^0.8.5",
     "elm-hot": "^1.1.2",
