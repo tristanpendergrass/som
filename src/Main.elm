@@ -1135,33 +1135,40 @@ renderHeader =
     h1 [ class "text-xl text-left text-primary" ] [ text "Stormcrow Override Manager" ]
 
 
-renderApplyOverridesButton : Model -> Html Msg
-renderApplyOverridesButton model =
+renderActionBar : Model -> Html Msg
+renderActionBar model =
     let
         isDisabled =
             List.isEmpty model.activeOverrides
     in
-    div [ class "flex space-x-1" ]
-        [ button
-            [ class "btn btn-primary btn-sm gap-2"
-            , onClick ApplyOverrides
-            , disabled isDisabled
+    div [ class "flex justify-between items-center" ]
+        [ div [ class "flex space-x-1" ]
+            [ button
+                [ class "btn btn-primary btn-sm gap-2"
+                , onClick ApplyOverrides
+                , disabled isDisabled
+                ]
+                [ FeatherIcons.zap
+                    |> FeatherIcons.withClass "inline-block"
+                    |> FeatherIcons.withSize 16
+                    |> FeatherIcons.toHtml []
+                , text "Override"
+                ]
+            , button
+                [ class "btn btn-secondary btn-sm gap-2"
+                , onClick Export
+                , disabled isDisabled
+                ]
+                [ FeatherIcons.clipboard
+                    |> FeatherIcons.withSize 16
+                    |> FeatherIcons.toHtml []
+                , text "Copy"
+                ]
             ]
-            [ FeatherIcons.zap
-                |> FeatherIcons.withClass "inline-block"
+        , button [ class "btn btn-ghost btn-sm", onClick <| SetActiveTab SettingsTab ]
+            [ FeatherIcons.settings
                 |> FeatherIcons.withSize 16
                 |> FeatherIcons.toHtml []
-            , text "Override"
-            ]
-        , button
-            [ class "btn btn-secondry btn-sm gap-2"
-            , onClick Export
-            , disabled isDisabled
-            ]
-            [ FeatherIcons.clipboard
-                |> FeatherIcons.withSize 16
-                |> FeatherIcons.toHtml []
-            , text "Copy"
             ]
         ]
 
@@ -1194,7 +1201,7 @@ view model =
                 [ renderHeader
                 , renderTabs model
                 , div [ class "flex justify-left my-2" ]
-                    [ renderApplyOverridesButton model ]
+                    [ renderActionBar model ]
                 , renderFeatureFilter model
                 , div
                     [ class "flex-grow" ]
