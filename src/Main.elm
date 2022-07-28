@@ -5,9 +5,9 @@ port module Main exposing (main)
 import Browser
 import Browser.Dom
 import FeatherIcons
-import Html exposing (Html, a, button, div, form, h1, h2, input, label, li, option, select, span, table, td, text, th, tr, ul)
+import Html exposing (Html, a, button, div, form, h1, h2, input, label, li, option, select, span, text, ul)
 import Html.Attributes exposing (checked, class, classList, disabled, for, id, name, placeholder, selected, style, type_, value)
-import Html.Events exposing (onBlur, onCheck, onClick, onInput, onSubmit)
+import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
 import Html.Keyed
 import Json.Decode as D
 import Json.Encode as E
@@ -578,9 +578,13 @@ addInactiveOverride override model =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
+    let
+        noOp =
+            ( model, Cmd.none )
+    in
     case msg of
         NoOp ->
-            ( model, Cmd.none )
+            noOp
 
         SetBrowserUrl url ->
             ( { model | browserUrl = Url.fromString url }, Cmd.none )
@@ -724,18 +728,22 @@ update msg model =
             ( { model | feature = feature }, Cmd.none )
 
         HandleAddOverrideSubmit ->
-            -- case Parser.run featureParser model.feature of
-            let
-                submittedOverrides =
-                    ParseUserInput.parseUserInput model.feature
+            case model.feature of
+                "" ->
+                    noOp
 
-                newModel : Model
-                newModel =
-                    model
-                        |> addSubmittedOverrides submittedOverrides
-                        |> (\oldModel -> { oldModel | feature = "" })
-            in
-            ( newModel, sendToLocalStorage <| encodeModel newModel )
+                _ ->
+                    let
+                        submittedOverrides =
+                            ParseUserInput.parseUserInput model.feature
+
+                        newModel : Model
+                        newModel =
+                            model
+                                |> addSubmittedOverrides submittedOverrides
+                                |> (\oldModel -> { oldModel | feature = "" })
+                    in
+                    ( newModel, sendToLocalStorage <| encodeModel newModel )
 
         FocusResult result ->
             -- handle success or failure here
