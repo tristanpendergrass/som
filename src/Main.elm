@@ -459,7 +459,7 @@ type Msg
     | HandleVariantSelectionInput Override String
     | HandleCustomVariantInput Override String
     | SetFeatureEdit (Maybe Override)
-    | HandleFeatureDraftInput String
+    | HandleFeatureInput Override String
     | CancelFeatureEdit
     | ToggleSelectOverride Override Bool
     | DeactivateAllOverrides
@@ -785,13 +785,13 @@ update msg model =
                     in
                     ( newModel, sendToLocalStorage <| encodeModel newModel )
 
-        HandleFeatureDraftInput value ->
-            case model.featureEditState of
-                NotEditing ->
-                    ( model, Cmd.none )
-
-                Editing override _ originalValue ->
-                    ( { model | featureEditState = Editing override (DraftValue value) originalValue }, Cmd.none )
+        HandleFeatureInput override value ->
+            let
+                newModel =
+                    model
+                        |> replaceOverride override { override | feature = value }
+            in
+            ( newModel, sendToLocalStorage <| encodeModel newModel )
 
         CancelFeatureEdit ->
             case model.featureEditState of
@@ -948,12 +948,12 @@ renderAddOverride model =
 
 overrideCheckbox : { isChecked : Bool, handleCheck : Bool -> Msg } -> Html Msg
 overrideCheckbox { isChecked, handleCheck } =
-    input [ type_ "checkbox", checked isChecked, onCheck handleCheck, class "checkbox" ] []
+    input [ type_ "checkbox", checked isChecked, onCheck handleCheck, class "checkbox checkbox-sm" ] []
 
 
 overrideDeleteButton : { handleDelete : Msg } -> Html Msg
 overrideDeleteButton { handleDelete } =
-    button [ class "btn btn-square btn-ghost btn-sm btn-warning", onClick handleDelete ]
+    button [ class "btn btn-square btn-ghost btn-sm", onClick handleDelete ]
         [ FeatherIcons.trash2
             |> FeatherIcons.withSize 12
             |> FeatherIcons.toHtml []
@@ -970,10 +970,32 @@ renderActiveOverride override =
     let
         customOptionSelected =
             override.variantSelection == CustomVariant && override.customVariantText /= "V1" && override.customVariantText /= "V2"
+
+        contextualColors =
+            case override.variantSelection of
+                OffVariant ->
+                    "bg-error/50 text-error-content"
+
+                OnVariant ->
+                    "bg-success/50 text-success-content"
+
+                _ ->
+                    "bg-warning/50 text-warning-content"
+
+        baseColors =
+            "bg-base-200 text-base-content"
     in
     div [ class "flex w-full h-9 items-center space-x-2" ]
         [ overrideCheckbox { isChecked = True, handleCheck = ToggleSelectOverride override }
-        , div [ class "flex-grow" ] [ input [ type_ "text", value override.feature, class "input input-xs w-full" ] [] ]
+        , div [ class "flex-grow" ]
+            [ input
+                [ type_ "text"
+                , value override.feature
+                , class "input input-xs w-full"
+                , onInput (HandleFeatureInput override)
+                ]
+                []
+            ]
         , if override.variantSelection == CustomVariant then
             div [ class "flex-grow" ]
                 [ input
@@ -983,6 +1005,7 @@ renderActiveOverride override =
                     , class "input input-xs w-full"
                     , style "min-width" "20px"
                     , onInput <| HandleCustomVariantInput override
+                    , class contextualColors
                     ]
                     []
                 ]
@@ -991,14 +1014,15 @@ renderActiveOverride override =
             div [] []
         , select
             [ class "select select-bordered select-xs"
+            , class contextualColors
             , style "max-width" "4rem"
             , onInput <| HandleVariantSelectionInput override
             ]
-            [ option [ selected (override.variantSelection == OnVariant), value "ON" ] [ text "ON" ]
-            , option [ selected (override.variantSelection == OffVariant), value "OFF" ] [ text "OFF" ]
-            , option [ selected (override.variantSelection == V1Variant), value "V1" ] [ text "V1" ]
-            , option [ selected (override.variantSelection == V2Variant), value "V2" ] [ text "V2" ]
-            , option [ selected customOptionSelected, value "CustomVariant" ] [ text "Custom" ]
+            [ option [ selected (override.variantSelection == OnVariant), value "ON", class baseColors ] [ text "ON" ]
+            , option [ selected (override.variantSelection == OffVariant), value "OFF", class baseColors ] [ text "OFF" ]
+            , option [ selected (override.variantSelection == V1Variant), value "V1", class baseColors ] [ text "V1" ]
+            , option [ selected (override.variantSelection == V2Variant), value "V2", class baseColors ] [ text "V2" ]
+            , option [ selected customOptionSelected, value "CustomVariant", class baseColors ] [ text "Custom" ]
             ]
         , overrideDeleteButton { handleDelete = Archive override }
         ]
@@ -1313,7 +1337,7 @@ view model =
                                         ( String.fromInt override.id, renderActiveOverride override )
                                     )
                             )
-                        , div [ class "divider-horizontal", classList [ ( "hidden", List.isEmpty model.inactiveOverrides ) ] ] []
+                        , div [ class "divider", classList [ ( "hidden", List.isEmpty model.inactiveOverrides ) ] ] [ text "Inactive" ]
 
                         -- Inactive overrides
                         , div [ class "flex flex-col w-full" ]
