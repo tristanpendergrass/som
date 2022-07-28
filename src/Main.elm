@@ -939,28 +939,24 @@ renderAddOverride model =
                 [ input
                     [ type_ "text"
                     , value model.feature
-                    , class "input input-xs w-full"
+                    , class "input input-xs input-bordered w-full"
                     , onInput HandleAddOverrideFeatureInput
                     ]
                     []
                 ]
+
+            -- Invisible elements included for spacing alignment with list
+            , div [ class "invisible" ]
+                [ select
+                    [ class "select select-bordered select-xs"
+                    , style "max-width" "4rem"
+                    ]
+                    [ option [ selected True ] [ text "Custom" ]
+                    ]
+                ]
+            , div [ class "invisible" ] [ overrideDeleteButton { handleDelete = NoOp } ]
             ]
         ]
-
-
-
--- div [ class "flex items-center space-x-1 my-1" ]
---     [ input [ type_ "checkbox", class "invisible" ] []
---     , button [ class iconButton, onClick HandleAddOverrideSubmit, disabled (model.feature == "") ]
---         [ FeatherIcons.plus
---             |> FeatherIcons.withSize 12
---             |> FeatherIcons.withClass "text-blue-500"
---             |> FeatherIcons.toHtml []
---         ]
---     , form [ onSubmit HandleAddOverrideSubmit, class "flex-grow" ]
---         [ input [ class underlineInput, value model.feature, onInput HandleAddOverrideFeatureInput, placeholder "my_new_feature" ] []
---         ]
---     ]
 
 
 overrideCheckbox : { isChecked : Bool, handleCheck : Bool -> Msg } -> Html Msg
@@ -979,8 +975,13 @@ overrideDeleteButton { handleDelete } =
 
 overrideAddButton : { handleAdd : Msg } -> Html Msg
 overrideAddButton { handleAdd } =
-    button [ class "btn btn-square btn-ghost btn-sm", onClick handleAdd ]
-        [ FeatherIcons.plusCircle
+    -- TODO: make this exactly the same size as the checkboxes
+    button
+        [ class "btn btn-square btn-xs btn-ghost"
+        , onClick handleAdd
+        , type_ "submit"
+        ]
+        [ FeatherIcons.plus
             |> FeatherIcons.withSize 12
             |> FeatherIcons.toHtml []
         ]
@@ -1061,139 +1062,6 @@ renderInactiveOverride override =
         , div [ class "flex-grow pl-2" ] [ div [] [ text override.feature ] ]
         , overrideDeleteButton { handleDelete = Archive override }
         ]
-
-
-
--- renderOverride : Bool -> FeatureEditState -> Override -> Html Msg
--- renderOverride isActive featureEditState override =
---     let
---         fadeIfInactive =
---             class <|
---                 if isActive then
---                     ""
---                 else
---                     "opacity-50"
---         featureText =
---             div [ class tooltip ]
---                 [ div [ class "truncate", fadeIfInactive ] [ text override.feature ]
---                 , div [ class tooltipText ] [ text override.feature ]
---                 ]
---         labelOrInput =
---             case featureEditState of
---                 NotEditing ->
---                     featureText
---                 Editing editingOverride draftValue _ ->
---                     if editingOverride == override then
---                         input
---                             [ id featureInputId
---                             , value (getDraftValue draftValue)
---                             , onInput HandleFeatureDraftInput
---                             , class "w-full"
---                             , class underlineInput
---                             , onBlur <| SetFeatureEdit Nothing
---                             ]
---                             []
---                     else
---                         featureText
---         toggleButton =
---             let
---                 justButton =
---                     button
---                         [ class iconButton
---                         , onClick (ToggleSelectOverride override (not isActive))
---                         ]
---                         [ if isActive then
---                             FeatherIcons.x
---                                 |> FeatherIcons.withSize 12
---                                 |> FeatherIcons.withClass "text-red-500 hover:text-red-700"
---                                 |> FeatherIcons.toHtml []
---                           else
---                             FeatherIcons.plus
---                                 |> FeatherIcons.withSize 12
---                                 |> FeatherIcons.withClass "text-blue-500 hover:text-blue-700"
---                                 |> FeatherIcons.toHtml []
---                         ]
---             in
---             if isActive then
---                 justButton
---             else
---                 div [ class tooltip ]
---                     [ justButton
---                     , div [ class tooltipText, class "-ml-12" ] [ text "Reactivate" ]
---                     ]
---         customVariantInput =
---             let
---                 hideInput : Bool
---                 hideInput =
---                     override.variantSelection /= CustomVariant
---             in
---             input
---                 [ onInput (HandleCustomVariantInput override)
---                 , value override.customVariantText
---                 , classList [ ( "hidden", hideInput ) ]
---                 , class underlineInput
---                 , style "width" "100px"
---                 ]
---                 []
---         -- hard coding this value since setting both divs to flex-grow:1 wasn't working for some reason
---         halfWidth =
---             177
---         -- hard coding this value since setting both divs to flex-grow:1 wasn't working for some reason
---         fullWidth =
---             354
---         titleColor =
---             case override.variantSelection of
---                 OffVariant ->
---                     "bg-red-100"
---                 OnVariant ->
---                     "bg-green-100"
---                 CustomVariant ->
---                     "bg-yellow-100"
---         archiveButton =
---             div [ class tooltip ]
---                 [ button [ class iconButton, onClick (Archive override) ]
---                     [ FeatherIcons.archive
---                         |> FeatherIcons.withSize 12
---                         |> FeatherIcons.withClass "text-warning"
---                         |> FeatherIcons.toHtml []
---                     ]
---                 , div [ class tooltipText, class "-ml-12" ] [ text "Archive" ]
---                 ]
---         activeRowContent =
---             [ div [ style "width" (String.fromInt halfWidth ++ "px") ] [ labelOrInput ]
---             , div [ fadeIfInactive ] [ text ":" ]
---             , div
---                 [ class "flex justify-end space-x-1"
---                 , style "width" (String.fromInt halfWidth ++ "px")
---                 , fadeIfInactive
---                 ]
---                 [ customVariantInput
---                 , select
---                     [ onInput (HandleVariantSelectionInput override), classList [ ( titleColor, isActive ) ] ]
---                     [ option [ value "OffVariant", selected (override.variantSelection == OffVariant) ] [ text "OFF" ]
---                     , option [ value "OnVariant", selected (override.variantSelection == OnVariant) ] [ text "ON" ]
---                     , option [ value "CustomVariant", selected (override.variantSelection == CustomVariant) ] [ text "Custom" ]
---                     ]
---                 ]
---             ]
---         inactiveRowContent =
---             [ div [ style "width" (String.fromInt fullWidth ++ "px") ] [ featureText ]
---             ]
---     in
---     div [ class "flex items-center space-x-1 group border-b border-gray-200 p-0.5" ]
---         [ div [ class "flex-grow flex justify-between" ]
---             (if isActive then
---                 activeRowContent
---              else
---                 inactiveRowContent
---             )
---         , div [ class "flex items-center space-x-0.5" ]
---             (if isActive then
---                 [ toggleButton ]
---              else
---                 [ toggleButton, archiveButton ]
---             )
---         ]
 
 
 renderFeatureFilter : Model -> Html Msg
@@ -1319,9 +1187,6 @@ view model =
     let
         bodyClasses =
             "flex flex-col space-y-4 h-full w-screen p-4"
-
-        listHeader =
-            "mt-4 flex justify-between items-end width-100"
     in
     case model.activeTab of
         MainTab ->
@@ -1340,18 +1205,6 @@ view model =
 
                      else
                         [ renderAddOverride model
-                        , div [ class listHeader ]
-                            [ span [] [] -- placeholder so justify-between on parent will cause buttons below to be pushed to the right side
-                            , div [ class tooltip ]
-                                [ button [ class iconButton, classList [ ( "invisible", List.length model.activeOverrides <= 1 ) ], onClick DeactivateAllOverrides ]
-                                    [ FeatherIcons.xSquare
-                                        |> FeatherIcons.withSize 16
-                                        |> FeatherIcons.withClass "text-gray-500 hover:text-red-700"
-                                        |> FeatherIcons.toHtml []
-                                    ]
-                                , div [ class tooltipText, class "-ml-20" ] [ text "Deactivate All" ]
-                                ]
-                            ]
 
                         -- Active overrides
                         , Html.Keyed.node "div"
