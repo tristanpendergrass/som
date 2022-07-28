@@ -932,18 +932,35 @@ linkText =
 
 renderAddOverride : Model -> Html Msg
 renderAddOverride model =
-    div [ class "flex items-center space-x-1 my-1" ]
-        [ input [ type_ "checkbox", class "invisible" ] []
-        , button [ class iconButton, onClick HandleAddOverrideSubmit, disabled (model.feature == "") ]
-            [ FeatherIcons.plus
-                |> FeatherIcons.withSize 12
-                |> FeatherIcons.withClass "text-blue-500"
-                |> FeatherIcons.toHtml []
-            ]
-        , form [ onSubmit HandleAddOverrideSubmit, class "flex-grow" ]
-            [ input [ class underlineInput, value model.feature, onInput HandleAddOverrideFeatureInput, placeholder "my_new_feature" ] []
+    form [ onSubmit HandleAddOverrideSubmit ]
+        [ div [ class "flex w-full h-9 items-center space-x-2" ]
+            [ overrideAddButton { handleAdd = HandleAddOverrideSubmit }
+            , div [ class "flex-grow" ]
+                [ input
+                    [ type_ "text"
+                    , value model.feature
+                    , class "input input-xs w-full"
+                    , onInput HandleAddOverrideFeatureInput
+                    ]
+                    []
+                ]
             ]
         ]
+
+
+
+-- div [ class "flex items-center space-x-1 my-1" ]
+--     [ input [ type_ "checkbox", class "invisible" ] []
+--     , button [ class iconButton, onClick HandleAddOverrideSubmit, disabled (model.feature == "") ]
+--         [ FeatherIcons.plus
+--             |> FeatherIcons.withSize 12
+--             |> FeatherIcons.withClass "text-blue-500"
+--             |> FeatherIcons.toHtml []
+--         ]
+--     , form [ onSubmit HandleAddOverrideSubmit, class "flex-grow" ]
+--         [ input [ class underlineInput, value model.feature, onInput HandleAddOverrideFeatureInput, placeholder "my_new_feature" ] []
+--         ]
+--     ]
 
 
 overrideCheckbox : { isChecked : Bool, handleCheck : Bool -> Msg } -> Html Msg
@@ -955,6 +972,15 @@ overrideDeleteButton : { handleDelete : Msg } -> Html Msg
 overrideDeleteButton { handleDelete } =
     button [ class "btn btn-square btn-ghost btn-sm", onClick handleDelete ]
         [ FeatherIcons.trash2
+            |> FeatherIcons.withSize 12
+            |> FeatherIcons.toHtml []
+        ]
+
+
+overrideAddButton : { handleAdd : Msg } -> Html Msg
+overrideAddButton { handleAdd } =
+    button [ class "btn btn-square btn-ghost btn-sm", onClick handleAdd ]
+        [ FeatherIcons.plusCircle
             |> FeatherIcons.withSize 12
             |> FeatherIcons.toHtml []
         ]
