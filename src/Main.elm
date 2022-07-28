@@ -5,7 +5,7 @@ port module Main exposing (main)
 import Browser
 import Browser.Dom
 import FeatherIcons
-import Html exposing (Html, a, button, div, form, h1, h2, input, label, li, option, select, span, text, ul, tr, th, table, td)
+import Html exposing (Html, a, button, div, form, h1, h2, input, label, li, option, select, span, table, td, text, th, tr, ul)
 import Html.Attributes exposing (checked, class, classList, disabled, for, id, name, placeholder, selected, style, type_, value)
 import Html.Events exposing (onBlur, onCheck, onClick, onInput, onSubmit)
 import Html.Keyed
@@ -135,6 +135,12 @@ variantSelectionToString value =
         OffVariant ->
             "OffVariant"
 
+        V1Variant ->
+            "V1Variant"
+
+        V2Variant ->
+            "V2Variant"
+
         CustomVariant ->
             "CustomVariant"
 
@@ -147,6 +153,12 @@ variantSelectionFromString value =
 
         "OffVariant" ->
             OffVariant
+
+        "V1Variant" ->
+            V1Variant
+
+        "V2Variant" ->
+            V2Variant
 
         "CustomVariant" ->
             CustomVariant
@@ -175,6 +187,8 @@ type alias Feature =
 type VariantSelection
     = OnVariant
     | OffVariant
+    | V1Variant
+    | V2Variant
     | CustomVariant
 
 
@@ -381,6 +395,12 @@ applyOverrides overrides oldQueryParams =
                         OffVariant ->
                             QueryParams.applyOverride override.feature "OFF" accumulator
 
+                        V1Variant ->
+                            QueryParams.applyOverride override.feature "V1" accumulator
+
+                        V2Variant ->
+                            QueryParams.applyOverride override.feature "V2" accumulator
+
                         CustomVariant ->
                             QueryParams.applyOverride override.feature override.customVariantText accumulator
             )
@@ -419,7 +439,8 @@ makeUrl ttlLength token overrides oldUrl =
 
 
 type Msg
-    = SetBrowserUrl String
+    = NoOp
+    | SetBrowserUrl String
     | HandleFeatureFilterInput String
     | ApplyOverrides
     | SetActiveTab ActiveTab
@@ -558,6 +579,9 @@ addInactiveOverride override model =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        NoOp ->
+            ( model, Cmd.none )
+
         SetBrowserUrl url ->
             ( { model | browserUrl = Url.fromString url }, Cmd.none )
 
@@ -578,17 +602,37 @@ update msg model =
 
         HandleVariantSelectionInput override selection ->
             let
-                newOverride : Override
-                newOverride =
-                    { override | variantSelection = variantSelectionFromString selection }
+                ( newOverride, commands ) =
+                    case selection of
+                        "ON" ->
+                            ( { override | variantSelection = OnVariant }, Cmd.none )
+
+                        "OFF" ->
+                            ( { override | variantSelection = OffVariant }, Cmd.none )
+
+                        "V1" ->
+                            ( { override | variantSelection = V1Variant }, Cmd.none )
+
+                        "V2" ->
+                            ( { override | variantSelection = V2Variant }, Cmd.none )
+
+                        _ ->
+                            ( { override | variantSelection = CustomVariant }
+                              -- Focus the custom input so user notices it
+                            , Task.attempt (\_ -> NoOp) (Browser.Dom.focus (domIdForCustomVariantInput override))
+                            )
 
                 newModel : Model
                 newModel =
                     model
-                        |> removeOverride override
-                        |> addActiveOverride newOverride
+                        |> replaceOverride override newOverride
             in
-            ( newModel, sendToLocalStorage <| encodeModel newModel )
+            ( newModel
+            , Cmd.batch
+                [ sendToLocalStorage <| encodeModel newModel
+                , commands
+                ]
+            )
 
         ApplyOverrides ->
             case model.browserUrl of
@@ -873,16 +917,6 @@ iconButton =
     "icon-button p-1 rounded group focus:outline-none hover:bg-gray-100"
 
 
-primaryButton : String
-primaryButton =
-    "primary-button bg-blue-500 text-gray-100 p-2 rounded-lg font-bold antialiased hover:bg-blue-400 cursor-pointer capitalize"
-
-
-primaryButtonDisabled : String
-primaryButtonDisabled =
-    "cursor-not-allowed opacity-50 hover:bg-blue-500"
-
-
 linkText : String
 linkText =
     "text-blue-500 hover:text-blue-400 font-bold uppercase px-3 py-1 text-xs mr-1 mb-1 cursor-pointer"
@@ -904,15 +938,73 @@ renderAddOverride model =
         ]
 
 
+overrideCheckbox : { isChecked : Bool, handleCheck : Bool -> Msg } -> Html Msg
+overrideCheckbox { isChecked, handleCheck } =
+    input [ type_ "checkbox", checked isChecked, onCheck handleCheck, class "checkbox" ] []
 
 
-
-renderOverride : Bool -> FeatureEditState -> Override -> Html Msg
-renderOverride isActive featureEditState override =
-    tr []
-        [ th [class "flex flex-col h-full justify-center"] [input [type_ "checkbox", checked isActive, class "checkbox" ] []]
-        , td [] [input [type_ "text", value override.feature, class "input input-xs"] []]
+overrideDeleteButton : { handleDelete : Msg } -> Html Msg
+overrideDeleteButton { handleDelete } =
+    button [ class "btn btn-square btn-ghost btn-sm btn-warning", onClick handleDelete ]
+        [ FeatherIcons.trash2
+            |> FeatherIcons.withSize 12
+            |> FeatherIcons.toHtml []
         ]
+
+
+domIdForCustomVariantInput : Override -> String
+domIdForCustomVariantInput { id } =
+    "custom-variant-input-" ++ String.fromInt id
+
+
+renderActiveOverride : Override -> Html Msg
+renderActiveOverride override =
+    let
+        customOptionSelected =
+            override.variantSelection == CustomVariant && override.customVariantText /= "V1" && override.customVariantText /= "V2"
+    in
+    div [ class "flex w-full h-9 items-center space-x-2" ]
+        [ overrideCheckbox { isChecked = True, handleCheck = ToggleSelectOverride override }
+        , div [ class "flex-grow" ] [ input [ type_ "text", value override.feature, class "input input-xs w-full" ] [] ]
+        , if override.variantSelection == CustomVariant then
+            div [ class "flex-grow" ]
+                [ input
+                    [ type_ "text"
+                    , id <| domIdForCustomVariantInput override
+                    , value override.customVariantText
+                    , class "input input-xs w-full"
+                    , style "min-width" "20px"
+                    , onInput <| HandleCustomVariantInput override
+                    ]
+                    []
+                ]
+
+          else
+            div [] []
+        , select
+            [ class "select select-bordered select-xs"
+            , style "max-width" "4rem"
+            , onInput <| HandleVariantSelectionInput override
+            ]
+            [ option [ selected (override.variantSelection == OnVariant), value "ON" ] [ text "ON" ]
+            , option [ selected (override.variantSelection == OffVariant), value "OFF" ] [ text "OFF" ]
+            , option [ selected (override.variantSelection == V1Variant), value "V1" ] [ text "V1" ]
+            , option [ selected (override.variantSelection == V2Variant), value "V2" ] [ text "V2" ]
+            , option [ selected customOptionSelected, value "CustomVariant" ] [ text "Custom" ]
+            ]
+        , overrideDeleteButton { handleDelete = Archive override }
+        ]
+
+
+renderInactiveOverride : Override -> Html Msg
+renderInactiveOverride override =
+    div [ class "flex w-full h-9 items-center space-x-2" ]
+        [ overrideCheckbox { isChecked = False, handleCheck = ToggleSelectOverride override }
+        , div [ class "flex-grow pl-2" ] [ div [] [ text override.feature ] ]
+        , overrideDeleteButton { handleDelete = Archive override }
+        ]
+
+
 
 -- renderOverride : Bool -> FeatureEditState -> Override -> Html Msg
 -- renderOverride isActive featureEditState override =
@@ -921,21 +1013,17 @@ renderOverride isActive featureEditState override =
 --             class <|
 --                 if isActive then
 --                     ""
-
 --                 else
 --                     "opacity-50"
-
 --         featureText =
 --             div [ class tooltip ]
 --                 [ div [ class "truncate", fadeIfInactive ] [ text override.feature ]
 --                 , div [ class tooltipText ] [ text override.feature ]
 --                 ]
-
 --         labelOrInput =
 --             case featureEditState of
 --                 NotEditing ->
 --                     featureText
-
 --                 Editing editingOverride draftValue _ ->
 --                     if editingOverride == override then
 --                         input
@@ -947,10 +1035,8 @@ renderOverride isActive featureEditState override =
 --                             , onBlur <| SetFeatureEdit Nothing
 --                             ]
 --                             []
-
 --                     else
 --                         featureText
-
 --         toggleButton =
 --             let
 --                 justButton =
@@ -963,7 +1049,6 @@ renderOverride isActive featureEditState override =
 --                                 |> FeatherIcons.withSize 12
 --                                 |> FeatherIcons.withClass "text-red-500 hover:text-red-700"
 --                                 |> FeatherIcons.toHtml []
-
 --                           else
 --                             FeatherIcons.plus
 --                                 |> FeatherIcons.withSize 12
@@ -973,13 +1058,11 @@ renderOverride isActive featureEditState override =
 --             in
 --             if isActive then
 --                 justButton
-
 --             else
 --                 div [ class tooltip ]
 --                     [ justButton
 --                     , div [ class tooltipText, class "-ml-12" ] [ text "Reactivate" ]
 --                     ]
-
 --         customVariantInput =
 --             let
 --                 hideInput : Bool
@@ -994,26 +1077,20 @@ renderOverride isActive featureEditState override =
 --                 , style "width" "100px"
 --                 ]
 --                 []
-
 --         -- hard coding this value since setting both divs to flex-grow:1 wasn't working for some reason
 --         halfWidth =
 --             177
-
 --         -- hard coding this value since setting both divs to flex-grow:1 wasn't working for some reason
 --         fullWidth =
 --             354
-
 --         titleColor =
 --             case override.variantSelection of
 --                 OffVariant ->
 --                     "bg-red-100"
-
 --                 OnVariant ->
 --                     "bg-green-100"
-
 --                 CustomVariant ->
 --                     "bg-yellow-100"
-
 --         archiveButton =
 --             div [ class tooltip ]
 --                 [ button [ class iconButton, onClick (Archive override) ]
@@ -1024,7 +1101,6 @@ renderOverride isActive featureEditState override =
 --                     ]
 --                 , div [ class tooltipText, class "-ml-12" ] [ text "Archive" ]
 --                 ]
-
 --         activeRowContent =
 --             [ div [ style "width" (String.fromInt halfWidth ++ "px") ] [ labelOrInput ]
 --             , div [ fadeIfInactive ] [ text ":" ]
@@ -1042,7 +1118,6 @@ renderOverride isActive featureEditState override =
 --                     ]
 --                 ]
 --             ]
-
 --         inactiveRowContent =
 --             [ div [ style "width" (String.fromInt fullWidth ++ "px") ] [ featureText ]
 --             ]
@@ -1051,14 +1126,12 @@ renderOverride isActive featureEditState override =
 --         [ div [ class "flex-grow flex justify-between" ]
 --             (if isActive then
 --                 activeRowContent
-
 --              else
 --                 inactiveRowContent
 --             )
 --         , div [ class "flex items-center space-x-0.5" ]
 --             (if isActive then
 --                 [ toggleButton ]
-
 --              else
 --                 [ toggleButton, archiveButton ]
 --             )
@@ -1083,17 +1156,28 @@ renderTabs model =
     div [ class "tabs" ]
         [ a
             [ class "tab tab-bordered tab-md"
-            , class <| if model.activeTab == MainTab then "tab-active" else ""
+            , class <|
+                if model.activeTab == MainTab then
+                    "tab-active"
+
+                else
+                    ""
             , onClick (SetActiveTab MainTab)
             ]
             [ text "Main" ]
         , a
             [ class "tab tab-bordered tab-md"
-            , class <| if model.activeTab == SettingsTab then "tab-active" else ""
+            , class <|
+                if model.activeTab == SettingsTab then
+                    "tab-active"
+
+                else
+                    ""
             , onClick (SetActiveTab SettingsTab)
             ]
             [ text "Settings" ]
         ]
+
 
 renderArchivedOverride : Override -> Html Msg
 renderArchivedOverride override =
@@ -1210,25 +1294,24 @@ view model =
                                 , div [ class tooltipText, class "-ml-20" ] [ text "Deactivate All" ]
                                 ]
                             ]
-                        , Html.Keyed.node "table"
-                            [ class "table table-zebra table-compact w-full" ]
+
+                        -- Active overrides
+                        , Html.Keyed.node "div"
+                            [ class "flex flex-col w-full" ]
                             (model.activeOverrides
                                 |> List.filter (.feature >> matchString model.featureFilter)
                                 |> List.map
                                     (\override ->
-                                        ( String.fromInt override.id, renderOverride True model.featureEditState override )
+                                        ( String.fromInt override.id, renderActiveOverride override )
                                     )
                             )
-                        , div
-                            [ class listHeader
-                            , classList [ ( "hidden", List.isEmpty model.inactiveOverrides ) ]
-                            ]
-                            [ span [ class "text-lg" ] [ text "Inactive" ]
-                            ]
-                        , table [ class "table w-full" ]
+                        , div [ class "divider-horizontal", classList [ ( "hidden", List.isEmpty model.inactiveOverrides ) ] ] []
+
+                        -- Inactive overrides
+                        , div [ class "flex flex-col w-full" ]
                             (model.inactiveOverrides
                                 |> List.filter (.feature >> matchString model.featureFilter)
-                                |> List.map (renderOverride False model.featureEditState)
+                                |> List.map renderInactiveOverride
                             )
                         ]
                     )
