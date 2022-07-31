@@ -975,9 +975,12 @@ overrideDeleteButton { handleDelete } =
 
 overrideAddButton : { handleAdd : Msg } -> Html Msg
 overrideAddButton { handleAdd } =
-    -- TODO: make this exactly the same size as the checkboxes
     button
         [ class "btn btn-square btn-xs btn-ghost"
+        , style "width" "1.25rem"
+        , style "min-width" "1.25rem"
+        , style "height" "1.25rem"
+        , style "min-height" "1.25rem"
         , onClick handleAdd
         , type_ "submit"
         ]
@@ -1018,27 +1021,22 @@ renderActiveOverride override =
             [ input
                 [ type_ "text"
                 , value override.feature
-                , class "input input-xs w-full"
+                , class "input input-bordered input-xs w-full"
                 , onInput (HandleFeatureInput override)
                 ]
                 []
             ]
-        , if override.variantSelection == CustomVariant then
-            div [ class "flex-grow" ]
-                [ input
-                    [ type_ "text"
-                    , id <| domIdForCustomVariantInput override
-                    , value override.customVariantText
-                    , class "input input-xs w-full"
-                    , style "min-width" "20px"
-                    , onInput <| HandleCustomVariantInput override
-                    , class contextualColors
-                    ]
-                    []
+        , div [ class "flex-grow", classList [ ( "invisible", override.variantSelection /= CustomVariant ) ] ]
+            [ input
+                [ type_ "text"
+                , id <| domIdForCustomVariantInput override
+                , value override.customVariantText
+                , class "input input-bordered input-xs w-full"
+                , style "min-width" "20px"
+                , onInput <| HandleCustomVariantInput override
                 ]
-
-          else
-            div [] []
+                []
+            ]
         , select
             [ class "select select-bordered select-xs"
             , class contextualColors
@@ -1132,7 +1130,7 @@ renderArchivedOverride override =
 
 renderHeader : Html Msg
 renderHeader =
-    h1 [ class "text-xl text-left text-primary" ] [ text "Stormcrow Override Manager" ]
+    h1 [ class "text-xl text-left font-extrabold" ] [ text "Stormcrow Override Manager" ]
 
 
 renderActionBar : Model -> Html Msg
@@ -1141,7 +1139,7 @@ renderActionBar model =
         isDisabled =
             List.isEmpty model.activeOverrides
     in
-    div [ class "flex justify-between items-center" ]
+    div [ class "flex w-full justify-between items-center" ]
         [ div [ class "flex space-x-1" ]
             [ button
                 [ class "btn btn-primary btn-sm gap-2"
@@ -1155,7 +1153,7 @@ renderActionBar model =
                 , text "Override"
                 ]
             , button
-                [ class "btn btn-secondary btn-sm gap-2"
+                [ class "btn btn-secondary btn-sm gap-2 text-secondary-content"
                 , onClick Export
                 , disabled isDisabled
                 ]
@@ -1165,7 +1163,7 @@ renderActionBar model =
                 , text "Copy"
                 ]
             ]
-        , button [ class "btn btn-ghost btn-sm", onClick <| SetActiveTab SettingsTab ]
+        , button [ class "btn btn-square btn-ghost btn-sm", onClick <| SetActiveTab SettingsTab ]
             [ FeatherIcons.settings
                 |> FeatherIcons.withSize 16
                 |> FeatherIcons.toHtml []
@@ -1199,7 +1197,6 @@ view model =
         MainTab ->
             div [ class bodyClasses ]
                 [ renderHeader
-                , renderTabs model
                 , div [ class "flex justify-left my-2" ]
                     [ renderActionBar model ]
                 , renderFeatureFilter model
@@ -1294,7 +1291,15 @@ view model =
             in
             div [ class bodyClasses ]
                 [ renderHeader
-                , renderTabs model
+                , div [ class "flex w-full justify-between items-center" ]
+                    [ span [ class "text-lg font-bold" ] [ text "Settings" ]
+                    , button [ class "btn btn-sm btn-ghost gap-2", onClick <| SetActiveTab MainTab ]
+                        [ FeatherIcons.arrowLeftCircle
+                            |> FeatherIcons.withSize 16
+                            |> FeatherIcons.toHtml []
+                        , text "Done"
+                        ]
+                    ]
                 , div [ class "flex-col w-100 items-start my-4 space-y-4 h-full" ]
                     [ div [ class optionContainer ]
                         [ label [ class "flex space-x-1 items-center", for "override-token" ]
