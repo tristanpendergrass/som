@@ -5,7 +5,7 @@ port module Main exposing (main)
 import Browser
 import Browser.Dom
 import FeatherIcons
-import Html exposing (Html, a, button, div, form, h1, h2, input, label, li, option, select, span, text, ul)
+import Html exposing (Html, a, button, div, form, h1, input, label, li, option, select, span, text, ul)
 import Html.Attributes exposing (checked, class, classList, disabled, for, id, name, placeholder, selected, style, type_, value)
 import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
 import Html.Keyed
@@ -116,16 +116,6 @@ matchString left right =
     String.contains (String.toLower left) (String.toLower right)
 
 
-getDraftValue : DraftValue -> String
-getDraftValue (DraftValue value) =
-    value
-
-
-getOriginalValue : OriginalValue -> String
-getOriginalValue (OriginalValue value) =
-    value
-
-
 variantSelectionToString : VariantSelection -> String
 variantSelectionToString value =
     case value of
@@ -209,19 +199,6 @@ type alias LegacyOverride =
     }
 
 
-type DraftValue
-    = DraftValue String
-
-
-type OriginalValue
-    = OriginalValue String
-
-
-type FeatureEditState
-    = Editing Override DraftValue OriginalValue
-    | NotEditing
-
-
 type ActiveTab
     = MainTab
     | ArchiveTab
@@ -235,7 +212,6 @@ type alias Model =
     , inactiveOverrides : List Override
     , archivedOverrides : List Override
     , feature : String
-    , featureEditState : FeatureEditState
     , featureFilter : String
     , activeTab : ActiveTab
     , overrideToken : String
@@ -330,7 +306,6 @@ init ( initialBrowserUrl, localStorageData ) =
             , inactiveOverrides = inactiveOverrides
             , archivedOverrides = archivedOverrides
             , feature = ""
-            , featureEditState = NotEditing
             , featureFilter = ""
             , activeTab = MainTab
             , overrideToken = overrideToken
@@ -458,9 +433,7 @@ type Msg
       -- Edit Override
     | HandleVariantSelectionInput Override String
     | HandleCustomVariantInput Override String
-    | SetFeatureEdit (Maybe Override)
     | HandleFeatureInput Override String
-    | CancelFeatureEdit
     | ToggleSelectOverride Override Bool
     | DeactivateAllOverrides
     | Archive Override
@@ -516,11 +489,6 @@ removeOverride override model =
             removeFromTwoLists override ( model.activeOverrides, model.inactiveOverrides )
     in
     { model | activeOverrides = newActiveOverrides, inactiveOverrides = newInactiveOverrides }
-
-
-setFeatureEditState : FeatureEditState -> Model -> Model
-setFeatureEditState newFeatureEditState model =
-    { model | featureEditState = newFeatureEditState }
 
 
 addActiveOverride : Override -> Model -> Model
@@ -754,37 +722,6 @@ update msg model =
                 Ok () ->
                     ( model, Cmd.none )
 
-        SetFeatureEdit maybeOverride ->
-            case ( maybeOverride, model.featureEditState ) of
-                ( Nothing, NotEditing ) ->
-                    ( model, Cmd.none )
-
-                ( Nothing, Editing previousOverride draft _ ) ->
-                    let
-                        newModel =
-                            model
-                                |> replaceOverride previousOverride { previousOverride | feature = getDraftValue draft }
-                                |> setFeatureEditState NotEditing
-                    in
-                    ( newModel, sendToLocalStorage <| encodeModel newModel )
-
-                ( Just override, NotEditing ) ->
-                    ( { model | featureEditState = Editing override (DraftValue override.feature) (OriginalValue override.feature) }
-                    , Browser.Dom.focus featureInputId |> Task.attempt FocusResult
-                    )
-
-                ( Just override, Editing previousOverride _ originalValue ) ->
-                    let
-                        newFeatureEditState =
-                            Editing override (DraftValue override.feature) (OriginalValue override.feature)
-
-                        newModel =
-                            model
-                                |> replaceOverride previousOverride { previousOverride | feature = getOriginalValue originalValue }
-                                |> setFeatureEditState newFeatureEditState
-                    in
-                    ( newModel, sendToLocalStorage <| encodeModel newModel )
-
         HandleFeatureInput override value ->
             let
                 newModel =
@@ -792,20 +729,6 @@ update msg model =
                         |> replaceOverride override { override | feature = value }
             in
             ( newModel, sendToLocalStorage <| encodeModel newModel )
-
-        CancelFeatureEdit ->
-            case model.featureEditState of
-                NotEditing ->
-                    ( model, Cmd.none )
-
-                Editing override _ originalValue ->
-                    let
-                        newModel =
-                            model
-                                |> replaceOverride override { override | feature = getOriginalValue originalValue }
-                                |> setFeatureEditState NotEditing
-                    in
-                    ( newModel, Cmd.none )
 
         HandleFeatureFilterInput value ->
             ( { model | featureFilter = value }, Cmd.none )
@@ -884,11 +807,6 @@ subscriptions _ =
 
 
 -- VIEW
-
-
-featureInputId : String
-featureInputId =
-    "feature-input"
 
 
 underlineInput : String
