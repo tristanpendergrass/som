@@ -211,7 +211,7 @@ type alias Model =
     , activeOverrides : List Override
     , inactiveOverrides : List Override
     , archivedOverrides : List Override
-    , feature : String
+    , feature : Maybe String -- This is a Maybe because we only show the input to type a feature after user clicks a button
     , featureFilter : String
     , activeTab : ActiveTab
     , overrideToken : String
@@ -305,7 +305,7 @@ init ( initialBrowserUrl, localStorageData ) =
             , activeOverrides = activeOverrides
             , inactiveOverrides = inactiveOverrides
             , archivedOverrides = archivedOverrides
-            , feature = ""
+            , feature = Nothing
             , featureFilter = ""
             , activeTab = MainTab
             , overrideToken = overrideToken
@@ -428,6 +428,7 @@ type Msg
     | SetTtl TtlLength
     | Export
       -- Add Override
+    | ActivateFeatureInput
     | HandleAddOverrideFeatureInput String
     | HandleAddOverrideSubmit
       -- Edit Override
@@ -692,24 +693,32 @@ update msg model =
         Export ->
             ( model, writeToClipboard <| makeQueryString model.ttlLength model.overrideToken model.activeOverrides )
 
+        ActivateFeatureInput ->
+            ( { model | feature = Just "" }
+            , Task.attempt (\_ -> NoOp) (Browser.Dom.focus featureInputId)
+            )
+
         HandleAddOverrideFeatureInput feature ->
-            ( { model | feature = feature }, Cmd.none )
+            ( { model | feature = Just feature }, Cmd.none )
 
         HandleAddOverrideSubmit ->
             case model.feature of
-                "" ->
+                Nothing ->
                     noOp
 
-                _ ->
+                Just "" ->
+                    noOp
+
+                Just newFeature ->
                     let
                         submittedOverrides =
-                            ParseUserInput.parseUserInput model.feature
+                            ParseUserInput.parseUserInput newFeature
 
                         newModel : Model
                         newModel =
                             model
                                 |> addSubmittedOverrides submittedOverrides
-                                |> (\oldModel -> { oldModel | feature = "" })
+                                |> (\oldModel -> { oldModel | feature = Nothing })
                     in
                     ( newModel, sendToLocalStorage <| encodeModel newModel )
 
@@ -848,19 +857,41 @@ linkText =
     "text-blue-500 hover:text-blue-400 font-bold uppercase px-3 py-1 text-xs mr-1 mb-1 cursor-pointer"
 
 
+featureInputId : String
+featureInputId =
+    "feature-input"
+
+
 renderAddOverride : Model -> Html Msg
 renderAddOverride model =
     form [ onSubmit HandleAddOverrideSubmit ]
-        [ div [ class "flex w-full h-9 items-center space-x-2" ]
-            [ overrideAddButton { handleAdd = HandleAddOverrideSubmit }
-            , div [ class "flex-grow" ]
-                [ input
-                    [ type_ "text"
-                    , value model.feature
-                    , class "input input-xs input-bordered w-full"
-                    , onInput HandleAddOverrideFeatureInput
-                    ]
-                    []
+        [ div [ class "flex w-full h-9 items-center space-x-2 group" ]
+            [ case model.feature of
+                Nothing ->
+                    overrideAddButton { handleAdd = ActivateFeatureInput, visible = True }
+
+                Just _ ->
+                    -- Included just for spacing reasons
+                    overrideAddButton { handleAdd = NoOp, visible = False }
+            , div [ class "flex-grow group-hover:text-success" ]
+                [ case model.feature of
+                    Nothing ->
+                        div
+                            [ class "cursor-pointer"
+                            , onClick ActivateFeatureInput
+                            ]
+                            [ text "Add feature" ]
+
+                    Just feature ->
+                        input
+                            [ type_ "text"
+                            , id featureInputId
+                            , placeholder "feature_name"
+                            , value feature
+                            , class "input input-xs input-bordered w-full"
+                            , onInput HandleAddOverrideFeatureInput
+                            ]
+                            []
                 ]
 
             -- Invisible elements included for spacing alignment with list
@@ -891,10 +922,13 @@ overrideDeleteButton { handleDelete } =
         ]
 
 
-overrideAddButton : { handleAdd : Msg } -> Html Msg
-overrideAddButton { handleAdd } =
+overrideAddButton : { handleAdd : Msg, visible : Bool } -> Html Msg
+overrideAddButton { handleAdd, visible } =
     button
         [ class "btn btn-square btn-xs btn-ghost"
+
+        -- , class "group-hover:btn-success"
+        , classList [ ( "visible", visible ), ( "invisible", not visible ) ]
         , style "width" "1.25rem"
         , style "min-width" "1.25rem"
         , style "height" "1.25rem"
