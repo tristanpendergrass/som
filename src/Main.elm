@@ -959,9 +959,6 @@ domIdForCustomVariantInput { id } =
 renderActiveOverride : Override -> Html Msg
 renderActiveOverride override =
     let
-        customOptionSelected =
-            override.variantSelection == CustomVariant && override.customVariantText /= "V1" && override.customVariantText /= "V2"
-
         contextualColors =
             case override.variantSelection of
                 OffVariant ->
@@ -1008,7 +1005,7 @@ renderActiveOverride override =
             , option [ selected (override.variantSelection == OffVariant), value "OFF", class baseColors ] [ text "OFF" ]
             , option [ selected (override.variantSelection == V1Variant), value "V1", class baseColors ] [ text "V1" ]
             , option [ selected (override.variantSelection == V2Variant), value "V2", class baseColors ] [ text "V2" ]
-            , option [ selected customOptionSelected, value "CustomVariant", class baseColors ] [ text "Custom" ]
+            , option [ selected (override.variantSelection == CustomVariant), value "CustomVariant", class baseColors ] [ text "Custom" ]
             ]
         , overrideDeleteButton { handleDelete = Archive override }
         ]
