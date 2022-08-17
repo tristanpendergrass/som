@@ -8,6 +8,7 @@
     "elm-hot": "^1.1.2",
     "elm-test": "^0.19.1-revision4",
     "node-elm-compiler": "^5.0.4",
+    "npm-watch": "^0.11.0",
     "parcel": "^2.6.2",
     "parcel-bundler": "^1.12.5",
     "postcss": "^8.4.14",
@@ -16,6 +17,13 @@
   },
   "scripts": {
     "build": "parcel build src/index.html --dist-dir dist --public-url /dist/",
+    "build:watch": "npm-watch build",
     "test": "elm-test"
+  },
+  "watch": {
+    "build": {
+      "patterns": ["src/*"],
+      "extensions": "elm,js,html,css"
+    }
   }
 }

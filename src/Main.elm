@@ -862,49 +862,61 @@ featureInputId =
     "feature-input"
 
 
+renderClosedAddOverrideRow : Html Msg
+renderClosedAddOverrideRow =
+    div [ class "flex w-full h-9 items-center space-x-2" ]
+        [ overrideAddButton { handleAdd = ActivateFeatureInput, visible = True }
+        , div
+            [ class "cursor-pointer"
+            , onClick ActivateFeatureInput
+            ]
+            [ text "Add feature" ]
+        ]
+
+
+renderOpenAddOverrideRow : String -> Html Msg
+renderOpenAddOverrideRow feature =
+    form [ onSubmit HandleAddOverrideSubmit ]
+        [ div [ class "flex flex-col w-full border-" ]
+            [ div [ class "flex w-full h-9 items-center space-x-2" ]
+                [ -- Included just for spacing reasons
+                  overrideAddButton { handleAdd = NoOp, visible = False }
+                , div [ class "flex-grow" ]
+                    [ input
+                        [ type_ "text"
+                        , id featureInputId
+                        , placeholder "feature_name"
+                        , value feature
+                        , class "input input-xs input-bordered w-full"
+                        , onInput HandleAddOverrideFeatureInput
+                        ]
+                        []
+                    ]
+
+                -- Invisible elements included for spacing alignment with list
+                , div [ class "invisible" ]
+                    [ select
+                        [ class "select select-bordered select-xs"
+                        , style "max-width" "4rem"
+                        ]
+                        [ option [ selected True ] [ text "Custom" ]
+                        ]
+                    ]
+                , div [ class "invisible" ] [ overrideDeleteButton { handleDelete = NoOp } ]
+                ]
+            , div [ class "w-full" ] [ text "Did you know? Taco bell" ]
+            ]
+        ]
+
+
 renderAddOverride : Model -> Html Msg
 renderAddOverride model =
     case model.feature of
         Nothing ->
-            -- Add override input is closed. Show button
-            div [ class "flex w-full h-9 items-center space-x-2" ]
-                [ overrideAddButton { handleAdd = ActivateFeatureInput, visible = True }
-                , div
-                    [ class "cursor-pointer"
-                    , onClick ActivateFeatureInput
-                    ]
-                    [ text "Add feature" ]
-                ]
+            renderClosedAddOverrideRow
 
         Just feature ->
-            form [ onSubmit HandleAddOverrideSubmit ]
-                [ div [ class "flex w-full h-9 items-center space-x-2" ]
-                    [ -- Included just for spacing reasons
-                      overrideAddButton { handleAdd = NoOp, visible = False }
-                    , div [ class "flex-grow" ]
-                        [ input
-                            [ type_ "text"
-                            , id featureInputId
-                            , placeholder "feature_name"
-                            , value feature
-                            , class "input input-xs input-bordered w-full"
-                            , onInput HandleAddOverrideFeatureInput
-                            ]
-                            []
-                        ]
-
-                    -- Invisible elements included for spacing alignment with list
-                    , div [ class "invisible" ]
-                        [ select
-                            [ class "select select-bordered select-xs"
-                            , style "max-width" "4rem"
-                            ]
-                            [ option [ selected True ] [ text "Custom" ]
-                            ]
-                        ]
-                    , div [ class "invisible" ] [ overrideDeleteButton { handleDelete = NoOp } ]
-                    ]
-                ]
+            renderOpenAddOverrideRow feature
 
 
 overrideCheckbox : { isChecked : Bool, handleCheck : Bool -> Msg } -> Html Msg
