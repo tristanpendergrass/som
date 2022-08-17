@@ -864,26 +864,25 @@ featureInputId =
 
 renderAddOverride : Model -> Html Msg
 renderAddOverride model =
-    form [ onSubmit HandleAddOverrideSubmit ]
-        [ div [ class "flex w-full h-9 items-center space-x-2 group" ]
-            [ case model.feature of
-                Nothing ->
-                    overrideAddButton { handleAdd = ActivateFeatureInput, visible = True }
+    case model.feature of
+        Nothing ->
+            -- Add override input is closed. Show button
+            div [ class "flex w-full h-9 items-center space-x-2" ]
+                [ overrideAddButton { handleAdd = ActivateFeatureInput, visible = True }
+                , div
+                    [ class "cursor-pointer"
+                    , onClick ActivateFeatureInput
+                    ]
+                    [ text "Add feature" ]
+                ]
 
-                Just _ ->
-                    -- Included just for spacing reasons
-                    overrideAddButton { handleAdd = NoOp, visible = False }
-            , div [ class "flex-grow group-hover:text-success" ]
-                [ case model.feature of
-                    Nothing ->
-                        div
-                            [ class "cursor-pointer"
-                            , onClick ActivateFeatureInput
-                            ]
-                            [ text "Add feature" ]
-
-                    Just feature ->
-                        input
+        Just feature ->
+            form [ onSubmit HandleAddOverrideSubmit ]
+                [ div [ class "flex w-full h-9 items-center space-x-2" ]
+                    [ -- Included just for spacing reasons
+                      overrideAddButton { handleAdd = NoOp, visible = False }
+                    , div [ class "flex-grow" ]
+                        [ input
                             [ type_ "text"
                             , id featureInputId
                             , placeholder "feature_name"
@@ -892,20 +891,20 @@ renderAddOverride model =
                             , onInput HandleAddOverrideFeatureInput
                             ]
                             []
-                ]
+                        ]
 
-            -- Invisible elements included for spacing alignment with list
-            , div [ class "invisible" ]
-                [ select
-                    [ class "select select-bordered select-xs"
-                    , style "max-width" "4rem"
-                    ]
-                    [ option [ selected True ] [ text "Custom" ]
+                    -- Invisible elements included for spacing alignment with list
+                    , div [ class "invisible" ]
+                        [ select
+                            [ class "select select-bordered select-xs"
+                            , style "max-width" "4rem"
+                            ]
+                            [ option [ selected True ] [ text "Custom" ]
+                            ]
+                        ]
+                    , div [ class "invisible" ] [ overrideDeleteButton { handleDelete = NoOp } ]
                     ]
                 ]
-            , div [ class "invisible" ] [ overrideDeleteButton { handleDelete = NoOp } ]
-            ]
-        ]
 
 
 overrideCheckbox : { isChecked : Bool, handleCheck : Bool -> Msg } -> Html Msg
@@ -926,8 +925,6 @@ overrideAddButton : { handleAdd : Msg, visible : Bool } -> Html Msg
 overrideAddButton { handleAdd, visible } =
     button
         [ class "btn btn-square btn-xs btn-ghost"
-
-        -- , class "group-hover:btn-success"
         , classList [ ( "visible", visible ), ( "invisible", not visible ) ]
         , style "width" "1.25rem"
         , style "min-width" "1.25rem"
