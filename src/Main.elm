@@ -428,7 +428,7 @@ type Msg
     | SetTtl TtlLength
     | Export
       -- Add Override
-    | ActivateFeatureInput
+    | ToggleFeatureInput
     | HandleAddOverrideFeatureInput String
     | HandleAddOverrideSubmit
       -- Edit Override
@@ -693,8 +693,17 @@ update msg model =
         Export ->
             ( model, writeToClipboard <| makeQueryString model.ttlLength model.overrideToken model.activeOverrides )
 
-        ActivateFeatureInput ->
-            ( { model | feature = Just "" }
+        ToggleFeatureInput ->
+            let
+                newFeatureValue =
+                    case model.feature of
+                        Nothing ->
+                            Just ""
+
+                        Just _ ->
+                            Nothing
+            in
+            ( { model | feature = newFeatureValue }
             , Task.attempt (\_ -> NoOp) (Browser.Dom.focus featureInputId)
             )
 
@@ -865,22 +874,21 @@ featureInputId =
 renderClosedAddOverrideRow : Html Msg
 renderClosedAddOverrideRow =
     div [ class "flex w-full h-9 items-center space-x-2" ]
-        [ overrideAddButton { handleAdd = ActivateFeatureInput, visible = True }
+        [ overrideAddButton
         , div
             [ class "cursor-pointer"
-            , onClick ActivateFeatureInput
+            , onClick ToggleFeatureInput
             ]
             [ text "Add feature" ]
         ]
 
 
-renderOpenAddOverrideRow : String -> Html Msg
-renderOpenAddOverrideRow feature =
+renderOpenedAddOverrideRow : String -> Html Msg
+renderOpenedAddOverrideRow feature =
     form [ onSubmit HandleAddOverrideSubmit ]
         [ div [ class "flex flex-col w-full border-" ]
             [ div [ class "flex w-full h-9 items-center space-x-2" ]
-                [ -- Included just for spacing reasons
-                  overrideAddButton { handleAdd = NoOp, visible = False }
+                [ overrideCloseButton
                 , div [ class "flex-grow" ]
                     [ input
                         [ type_ "text"
@@ -916,7 +924,7 @@ renderAddOverride model =
             renderClosedAddOverrideRow
 
         Just feature ->
-            renderOpenAddOverrideRow feature
+            renderOpenedAddOverrideRow feature
 
 
 overrideCheckbox : { isChecked : Bool, handleCheck : Bool -> Msg } -> Html Msg
@@ -933,19 +941,33 @@ overrideDeleteButton { handleDelete } =
         ]
 
 
-overrideAddButton : { handleAdd : Msg, visible : Bool } -> Html Msg
-overrideAddButton { handleAdd, visible } =
+overrideAddButton : Html Msg
+overrideAddButton =
     button
         [ class "btn btn-square btn-xs btn-ghost"
-        , classList [ ( "visible", visible ), ( "invisible", not visible ) ]
         , style "width" "1.25rem"
         , style "min-width" "1.25rem"
         , style "height" "1.25rem"
         , style "min-height" "1.25rem"
-        , onClick handleAdd
-        , type_ "submit"
+        , onClick ToggleFeatureInput
         ]
         [ FeatherIcons.plus
+            |> FeatherIcons.withSize 12
+            |> FeatherIcons.toHtml []
+        ]
+
+
+overrideCloseButton : Html Msg
+overrideCloseButton =
+    button
+        [ class "btn btn-square btn-xs btn-ghost"
+        , style "width" "1.25rem"
+        , style "min-width" "1.25rem"
+        , style "height" "1.25rem"
+        , style "min-height" "1.25rem"
+        , onClick ToggleFeatureInput
+        ]
+        [ FeatherIcons.x
             |> FeatherIcons.withSize 12
             |> FeatherIcons.toHtml []
         ]
