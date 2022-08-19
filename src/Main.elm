@@ -13,6 +13,7 @@ import Json.Decode as D
 import Json.Encode as E
 import Json.Encode.Extra
 import List
+import Maybe.Extra
 import ParseUserInput
 import QueryParams exposing (QueryParam)
 import Task
@@ -871,34 +872,74 @@ featureInputId =
     "feature-input"
 
 
-renderClosedAddOverrideRow : Html Msg
-renderClosedAddOverrideRow =
-    div [ class "flex w-full h-9 items-center space-x-2" ]
-        [ overrideAddButton
-        , div
-            [ class "cursor-pointer"
-            , onClick ToggleFeatureInput
-            ]
-            [ text "Add feature" ]
+
+-- renderClosedAddOverrideRow : Html Msg
+-- renderClosedAddOverrideRow =
+--     div [ class "flex w-full h-9 items-center space-x-2" ]
+--         [ overrideAddToggleButton { isVisible = True, mode = Off }
+--         , div
+--             [ class "cursor-pointer"
+--             , onClick (ToggleFeatureInput True)
+--             ]
+--             [ text "Add feature" ]
+--         ]
+
+
+type ToggleButtonMode
+    = On
+    | Off
+
+
+overrideAddToggleButton : { isVisible : Bool, isAdd : Bool } -> Html Msg
+overrideAddToggleButton { isVisible, isAdd } =
+    label
+        [ class "swap swap-rotate"
+        , classList [ ( "invisible", not isVisible ), ( "swap-active", isAdd ) ]
+        , style "width" "1.25rem"
+        , style "min-width" "1.25rem"
+        , style "height" "1.25rem"
+        , style "min-height" "1.25rem"
+        , onClick ToggleFeatureInput
+        ]
+        [ FeatherIcons.plus
+            |> FeatherIcons.withClass "swap-on"
+            |> FeatherIcons.withSize 12
+            |> FeatherIcons.toHtml []
+        , FeatherIcons.x
+            |> FeatherIcons.withClass "swap-off"
+            |> FeatherIcons.withSize 12
+            |> FeatherIcons.toHtml []
         ]
 
 
-renderOpenedAddOverrideRow : String -> Html Msg
-renderOpenedAddOverrideRow feature =
+renderAddOverride : { feature : Maybe String } -> Html Msg
+renderAddOverride { feature } =
     form [ onSubmit HandleAddOverrideSubmit ]
-        [ div [ class "flex flex-col w-full border-" ]
+        [ div [ class "flex flex-col w-full space-y-1" ]
             [ div [ class "flex w-full h-9 items-center space-x-2" ]
-                [ overrideCloseButton
+                [ overrideAddToggleButton
+                    { isVisible = True
+                    , isAdd = Maybe.Extra.isNothing feature
+                    }
                 , div [ class "flex-grow" ]
-                    [ input
-                        [ type_ "text"
-                        , id featureInputId
-                        , placeholder "feature_name"
-                        , value feature
-                        , class "input input-xs input-bordered w-full"
-                        , onInput HandleAddOverrideFeatureInput
-                        ]
-                        []
+                    [ case feature of
+                        Just featureText ->
+                            input
+                                [ type_ "text"
+                                , id featureInputId
+                                , placeholder "feature_name"
+                                , value featureText
+                                , class "input input-xs input-bordered w-full"
+                                , onInput HandleAddOverrideFeatureInput
+                                ]
+                                []
+
+                        Nothing ->
+                            div
+                                [ class "cursor-pointer"
+                                , onClick ToggleFeatureInput
+                                ]
+                                [ text "Add feature" ]
                     ]
 
                 -- Invisible elements included for spacing alignment with list
@@ -912,19 +953,30 @@ renderOpenedAddOverrideRow feature =
                     ]
                 , div [ class "invisible" ] [ overrideDeleteButton { handleDelete = NoOp } ]
                 ]
-            , div [ class "w-full" ] [ text "Did you know? Taco bell" ]
             ]
+        , div [ class "w-full", classList [ ( "hidden", Maybe.Extra.isNothing feature ) ] ] [ renderAddOverrideInfo ]
         ]
 
 
-renderAddOverride : Model -> Html Msg
-renderAddOverride model =
-    case model.feature of
-        Nothing ->
-            renderClosedAddOverrideRow
-
-        Just feature ->
-            renderOpenedAddOverrideRow feature
+renderAddOverrideInfo : Html Msg
+renderAddOverrideInfo =
+    div [ class "w-full flex space-x-2" ]
+        [ overrideAddToggleButton { isVisible = False, isAdd = True }
+        , div [ class "flex flex-col flex-grow space-y-1" ]
+            [ div [ class "text-s flex items-center space-x-1" ]
+                [ FeatherIcons.info
+                    |> FeatherIcons.withSize 16
+                    |> FeatherIcons.withClass "inline-block"
+                    |> FeatherIcons.toHtml []
+                , span [] [ text "Supported syntax" ]
+                ]
+            , ul [ class "italic text-2xs list-disc pl-4" ]
+                [ li [] [ text "foo:bar" ]
+                , li [] [ text "foo" ]
+                , li [] [ text "www.dropbox.com/home?stormcrow_override=foo:bar" ]
+                ]
+            ]
+        ]
 
 
 overrideCheckbox : { isChecked : Bool, handleCheck : Bool -> Msg } -> Html Msg
@@ -936,38 +988,6 @@ overrideDeleteButton : { handleDelete : Msg } -> Html Msg
 overrideDeleteButton { handleDelete } =
     button [ class "btn btn-square btn-ghost btn-sm", onClick handleDelete ]
         [ FeatherIcons.trash2
-            |> FeatherIcons.withSize 12
-            |> FeatherIcons.toHtml []
-        ]
-
-
-overrideAddButton : Html Msg
-overrideAddButton =
-    button
-        [ class "btn btn-square btn-xs btn-ghost"
-        , style "width" "1.25rem"
-        , style "min-width" "1.25rem"
-        , style "height" "1.25rem"
-        , style "min-height" "1.25rem"
-        , onClick ToggleFeatureInput
-        ]
-        [ FeatherIcons.plus
-            |> FeatherIcons.withSize 12
-            |> FeatherIcons.toHtml []
-        ]
-
-
-overrideCloseButton : Html Msg
-overrideCloseButton =
-    button
-        [ class "btn btn-square btn-xs btn-ghost"
-        , style "width" "1.25rem"
-        , style "min-width" "1.25rem"
-        , style "height" "1.25rem"
-        , style "min-height" "1.25rem"
-        , onClick ToggleFeatureInput
-        ]
-        [ FeatherIcons.x
             |> FeatherIcons.withSize 12
             |> FeatherIcons.toHtml []
         ]
@@ -1183,12 +1203,12 @@ view model =
                 , div
                     [ class "flex-grow" ]
                     (if List.isEmpty model.activeOverrides && List.isEmpty model.inactiveOverrides then
-                        [ renderAddOverride model
+                        [ renderAddOverride { feature = model.feature }
                         , div [ class "w-full mt-32 text-center" ] [ text "No overrides exist." ]
                         ]
 
                      else
-                        [ renderAddOverride model
+                        [ renderAddOverride { feature = model.feature }
 
                         -- Active overrides
                         , Html.Keyed.node "div"
