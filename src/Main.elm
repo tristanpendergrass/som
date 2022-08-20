@@ -954,7 +954,7 @@ renderAddOverride { feature } =
                 , div [ class "invisible" ] [ overrideDeleteButton { handleDelete = NoOp } ]
                 ]
             ]
-        , div [ class "w-full", classList [ ( "hidden", Maybe.Extra.isNothing feature ) ] ] [ renderAddOverrideInfo ]
+        , div [ class "w-full transition-height overflow-hidden", classList [ ( "h-[4.5rem]", Maybe.Extra.isJust feature ), ( "h-0", Maybe.Extra.isNothing feature ) ] ] [ renderAddOverrideInfo ]
         ]
 
 
