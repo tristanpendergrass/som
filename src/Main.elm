@@ -6,7 +6,7 @@ import Browser
 import Browser.Dom
 import FeatherIcons
 import Html exposing (Html, a, button, div, form, h1, input, label, li, option, select, span, text, ul)
-import Html.Attributes exposing (checked, class, classList, disabled, for, id, name, placeholder, selected, style, type_, value)
+import Html.Attributes exposing (attribute, checked, class, classList, disabled, for, id, name, placeholder, selected, style, type_, value)
 import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
 import Html.Keyed
 import Json.Decode as D
@@ -853,30 +853,6 @@ underlineInput =
     "ml-0 mt-0 block w-full border-0 border-b-2 border-gray-200 focus:outline-none focus:ring-0 focus:border-gray-900"
 
 
-tooltip : String
-tooltip =
-    "tooltip relative"
-
-
-
--- The common classes for other tooltip utilities. Not intended to be used directly.
-
-
-tooltipContent : String
-tooltipContent =
-    "tooltip-text absolute z-50 bg-gray-900 text-gray-100 text-sm py-1 px-2 rounded-sm transition duration-200 delay-500"
-
-
-tooltipText : String
-tooltipText =
-    tooltipContent ++ " whitespace-nowrap"
-
-
-tooltipBlockText : String
-tooltipBlockText =
-    tooltipContent ++ " break-words"
-
-
 iconButton : String
 iconButton =
     "icon-button p-1 rounded group focus:outline-none hover:bg-gray-100"
@@ -964,26 +940,30 @@ renderAddOverride { feature } =
                 , case feature of
                     Just featureText ->
                         div [ class "flex space-x-1" ]
-                            [ button
-                                [ class "btn btn-sm btn-square btn-outline btn-primary"
-                                , disabled <| String.isEmpty featureText
-                                , onClick <| HandleAddOverrideSubmit { keepOpen = False }
+                            [ div [ class "tooltip tooltip-left", attribute "data-tip" "Add Override" ]
+                                [ button
+                                    [ class "btn btn-sm btn-square btn-outline btn-primary"
+                                    , disabled <| String.isEmpty featureText
+                                    , onClick <| HandleAddOverrideSubmit { keepOpen = False }
+                                    ]
+                                    [ FeatherIcons.check
+                                        |> FeatherIcons.withSize 12
+                                        |> FeatherIcons.toHtml []
+                                    ]
                                 ]
-                                [ FeatherIcons.check
-                                    |> FeatherIcons.withSize 12
-                                    |> FeatherIcons.toHtml []
-                                ]
-                            , button
-                                [ class "btn btn-sm btn-outline gap-2 btn-secondary"
-                                , disabled <| String.isEmpty featureText
-                                , onClick <| HandleAddOverrideSubmit { keepOpen = True }
-                                ]
-                                [ FeatherIcons.check
-                                    |> FeatherIcons.withSize 12
-                                    |> FeatherIcons.toHtml []
-                                , FeatherIcons.refreshCcw
-                                    |> FeatherIcons.withSize 12
-                                    |> FeatherIcons.toHtml []
+                            , div [ class "tooltip tooltip-left", attribute "data-tip" "Add and keep open" ]
+                                [ button
+                                    [ class "btn btn-sm btn-outline gap-2 btn-secondary"
+                                    , disabled <| String.isEmpty featureText
+                                    , onClick <| HandleAddOverrideSubmit { keepOpen = True }
+                                    ]
+                                    [ FeatherIcons.check
+                                        |> FeatherIcons.withSize 12
+                                        |> FeatherIcons.toHtml []
+                                    , FeatherIcons.refreshCcw
+                                        |> FeatherIcons.withSize 12
+                                        |> FeatherIcons.toHtml []
+                                    ]
                                 ]
                             ]
 
@@ -1143,24 +1123,22 @@ renderTabs model =
 renderArchivedOverride : Override -> Html Msg
 renderArchivedOverride override =
     div [ class "flex items-center" ]
-        [ div [ class tooltip ]
+        [ div [ class "tooltip", attribute "data-tip" "Unarchive" ]
             [ button [ class iconButton, onClick (Unarchive override) ]
                 [ FeatherIcons.rotateCcw
                     |> FeatherIcons.withSize 12
                     |> FeatherIcons.withClass "text-blue-500"
                     |> FeatherIcons.toHtml []
                 ]
-            , div [ class tooltipText ] [ text "Unarchive" ]
             ]
         , div [ class "flex-grow truncate" ] [ text override.feature ]
-        , div [ class tooltip ]
+        , div [ class "tooltip", attribute "data-tip" "Permanently Delete" ]
             [ button [ class iconButton, onClick (Delete override) ]
                 [ FeatherIcons.trash2
                     |> FeatherIcons.withSize 12
                     |> FeatherIcons.withClass "text-red-500"
                     |> FeatherIcons.toHtml []
                 ]
-            , div [ class tooltipText, class "-ml-32" ] [ text "Permanently Delete" ]
             ]
         ]
 
@@ -1288,29 +1266,25 @@ view model =
 
         SettingsTab ->
             let
-                tokenHelpIcon =
-                    div [ class tooltip ]
-                        [ FeatherIcons.helpCircle
-                            |> FeatherIcons.withSize 16
-                            |> FeatherIcons.toHtml []
-                        , div [ class tooltipBlockText, class "w-72" ]
-                            [ span [] [ text "A token is necessary if:" ]
-                            , ul [ class "list-disc list-inside" ]
-                                [ li [] [ text "using staging/prod AND" ]
-                                , li [] [ text "using a non-Dropbox account." ]
-                                ]
-                            , span [] [ text "You must also be on the corporate VPN. A given token lasts for 24 hours and SOM will clear this field after that time." ]
-                            ]
-                        ]
-
+                -- tokenHelpIcon =
+                --     div [ class "tooltip", attribute "data-tip" "kk" ]
+                --         [ FeatherIcons.helpCircle
+                --             |> FeatherIcons.withSize 16
+                --             |> FeatherIcons.toHtml []
+                --         , div [ class tooltipBlockText, class "w-72" ]
+                --             [ span [] [ text "A token is necessary if:" ]
+                --             , ul [ class "list-disc list-inside" ]
+                --                 [ li [] [ text "using staging/prod AND" ]
+                --                 , li [] [ text "using a non-Dropbox account." ]
+                --                 ]
+                --             , span [] [ text "You must also be on the corporate VPN. A given token lasts for 24 hours and SOM will clear this field after that time." ]
+                --             ]
+                --         ]
                 ttlHelpIcon =
-                    div [ class tooltip ]
+                    div [ class "tooltip", attribute "data-tip" "Time to Live (TTL) is the amount of time that a Stormcrow override will stay active once set." ]
                         [ FeatherIcons.helpCircle
                             |> FeatherIcons.withSize 16
                             |> FeatherIcons.toHtml []
-                        , div [ class tooltipBlockText, class "w-64" ]
-                            [ span [] [ text "Time to Live (TTL) is the amount of time that a Stormcrow override will stay active once set." ]
-                            ]
                         ]
 
                 tokenPlaceholder =
@@ -1341,7 +1315,8 @@ view model =
                     [ div [ class optionContainer ]
                         [ label [ class "flex space-x-1 items-center", for "override-token" ]
                             [ span [ class "text-xs font-medium" ] [ text "Override Token" ]
-                            , span [] [ tokenHelpIcon ]
+
+                            -- , span [] [ tokenHelpIcon ]
                             ]
                         , div [ class "flex items-center space-x-1" ]
                             [ div [ class "flex-grow" ]

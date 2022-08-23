@@ -8,17 +8,3 @@ body {
   height: 580px;
   font-family: "Atlas Grotesk", "AtlasGrotesk", sans-serif;
 }
-
-.tooltip-text {
-  visibility: hidden;
-  opacity: 0;
-}
-
-.tooltip:hover .tooltip-text {
-  visibility: visible;
-  opacity: 1;
-}
-
-.icon-button:active {
-  background-color: #E5E7EB;
-}
