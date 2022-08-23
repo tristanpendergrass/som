@@ -431,7 +431,7 @@ type Msg
       -- Add Override
     | ToggleFeatureInput
     | HandleAddOverrideFeatureInput String
-    | HandleAddOverrideSubmit
+    | HandleAddOverrideSubmit { keepOpen : Bool }
       -- Edit Override
     | HandleVariantSelectionInput Override String
     | HandleCustomVariantInput Override String
@@ -711,7 +711,7 @@ update msg model =
         HandleAddOverrideFeatureInput feature ->
             ( { model | feature = Just feature }, Cmd.none )
 
-        HandleAddOverrideSubmit ->
+        HandleAddOverrideSubmit { keepOpen } ->
             case model.feature of
                 Nothing ->
                     noOp
@@ -719,18 +719,38 @@ update msg model =
                 Just "" ->
                     noOp
 
-                Just newFeature ->
+                Just featureText ->
                     let
                         submittedOverrides =
-                            ParseUserInput.parseUserInput newFeature
+                            ParseUserInput.parseUserInput featureText
+
+                        newFeature =
+                            if keepOpen then
+                                Just ""
+
+                            else
+                                Nothing
+
+                        additionalCmds =
+                            if keepOpen then
+                                [ Task.attempt (\_ -> NoOp) (Browser.Dom.focus featureInputId) ]
+
+                            else
+                                []
 
                         newModel : Model
                         newModel =
                             model
                                 |> addSubmittedOverrides submittedOverrides
-                                |> (\oldModel -> { oldModel | feature = Nothing })
+                                |> (\oldModel -> { oldModel | feature = newFeature })
                     in
-                    ( newModel, sendToLocalStorage <| encodeModel newModel )
+                    ( newModel
+                    , Cmd.batch <|
+                        List.concat
+                            [ [ sendToLocalStorage <| encodeModel newModel ]
+                            , additionalCmds
+                            ]
+                    )
 
         FocusResult result ->
             -- handle success or failure here
@@ -914,7 +934,7 @@ overrideAddToggleButton { isVisible, isAdd } =
 
 renderAddOverride : { feature : Maybe String } -> Html Msg
 renderAddOverride { feature } =
-    form [ onSubmit HandleAddOverrideSubmit ]
+    form [ onSubmit <| HandleAddOverrideSubmit { keepOpen = False } ]
         [ div [ class "flex flex-col w-full space-y-1" ]
             [ div [ class "flex w-full h-9 items-center space-x-2" ]
                 [ overrideAddToggleButton
@@ -941,17 +961,34 @@ renderAddOverride { feature } =
                                 ]
                                 [ text "Add feature" ]
                     ]
+                , case feature of
+                    Just featureText ->
+                        div [ class "flex space-x-1" ]
+                            [ button
+                                [ class "btn btn-sm btn-square btn-outline btn-primary"
+                                , disabled <| String.isEmpty featureText
+                                , onClick <| HandleAddOverrideSubmit { keepOpen = False }
+                                ]
+                                [ FeatherIcons.check
+                                    |> FeatherIcons.withSize 12
+                                    |> FeatherIcons.toHtml []
+                                ]
+                            , button
+                                [ class "btn btn-sm btn-outline gap-2 btn-secondary"
+                                , disabled <| String.isEmpty featureText
+                                , onClick <| HandleAddOverrideSubmit { keepOpen = True }
+                                ]
+                                [ FeatherIcons.check
+                                    |> FeatherIcons.withSize 12
+                                    |> FeatherIcons.toHtml []
+                                , FeatherIcons.refreshCcw
+                                    |> FeatherIcons.withSize 12
+                                    |> FeatherIcons.toHtml []
+                                ]
+                            ]
 
-                -- Invisible elements included for spacing alignment with list
-                , div [ class "invisible" ]
-                    [ select
-                        [ class "select select-bordered select-xs"
-                        , style "max-width" "4rem"
-                        ]
-                        [ option [ selected True ] [ text "Custom" ]
-                        ]
-                    ]
-                , div [ class "invisible" ] [ overrideDeleteButton { handleDelete = NoOp } ]
+                    Nothing ->
+                        div [] []
                 ]
             ]
         , div [ class "w-full transition-height overflow-hidden", classList [ ( "h-[4.5rem]", Maybe.Extra.isJust feature ), ( "h-0", Maybe.Extra.isNothing feature ) ] ] [ renderAddOverrideInfo ]
