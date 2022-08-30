@@ -1216,148 +1216,152 @@ renderFooter =
         ]
 
 
+renderMainTab : Model -> Html Msg
+renderMainTab model =
+    div [ class "h-[29rem]" ]
+        [ div [ class "flex justify-left my-2" ]
+            [ renderActionBar model ]
+        , renderFeatureFilter model
+        , div
+            [ class "flex-grow" ]
+            (if List.isEmpty model.activeOverrides && List.isEmpty model.inactiveOverrides then
+                [ renderAddOverride { feature = model.feature }
+                , div [ class "w-full mt-32 text-center" ] [ text "No overrides exist." ]
+                ]
+
+             else
+                [ renderAddOverride { feature = model.feature }
+
+                -- Active overrides
+                , Html.Keyed.node "div"
+                    [ class "flex flex-col w-full" ]
+                    (model.activeOverrides
+                        |> List.filter (.feature >> matchString model.featureFilter)
+                        |> List.map
+                            (\override ->
+                                ( String.fromInt override.id, renderActiveOverride override )
+                            )
+                    )
+                , div [ class "divider", classList [ ( "hidden", List.isEmpty model.inactiveOverrides ) ] ] [ text "Inactive" ]
+
+                -- Inactive overrides
+                , div [ class "flex flex-col w-full" ]
+                    (model.inactiveOverrides
+                        |> List.filter (.feature >> matchString model.featureFilter)
+                        |> List.map renderInactiveOverride
+                    )
+                ]
+            )
+        ]
+
+
+renderSettingsTab : Model -> Html Msg
+renderSettingsTab model =
+    let
+        -- tokenHelpIcon =
+        --     div [ class "tooltip", attribute "data-tip" "kk" ]
+        --         [ FeatherIcons.helpCircle
+        --             |> FeatherIcons.withSize 16
+        --             |> FeatherIcons.toHtml []
+        --         , div [ class tooltipBlockText, class "w-72" ]
+        --             [ span [] [ text "A token is necessary if:" ]
+        --             , ul [ class "list-disc list-inside" ]
+        --                 [ li [] [ text "using staging/prod AND" ]
+        --                 , li [] [ text "using a non-Dropbox account." ]
+        --                 ]
+        --             , span [] [ text "You must also be on the corporate VPN. A given token lasts for 24 hours and SOM will clear this field after that time." ]
+        --             ]
+        --         ]
+        ttlHelpIcon =
+            div [ class "tooltip", attribute "data-tip" "Time to Live (TTL) is the amount of time that a Stormcrow override will stay active once set." ]
+                [ FeatherIcons.helpCircle
+                    |> FeatherIcons.withSize 16
+                    |> FeatherIcons.toHtml []
+                ]
+
+        tokenPlaceholder =
+            "BQ8OS6e8J... *OR* &override_token=BQ8OS6e8J..."
+
+        ttlRadioOption : TtlConfigObject -> Html Msg
+        ttlRadioOption { htmlId, length, htmlText } =
+            div [ class "flex space-x-1 cursor-pointer items-center" ]
+                [ input [ type_ "radio", id htmlId, name "override-ttl", checked <| model.ttlLength == length, onCheck (\_ -> SetTtl length) ] []
+                , label [ for htmlId ] [ text htmlText ]
+                ]
+
+        optionContainer =
+            "flex-col space-y-1 w-full border border-gray-700 py-4 px-2"
+    in
+    div [ class "h-[29rem]" ]
+        [ div [ class "flex w-full justify-between items-center" ]
+            [ span [ class "text-lg font-bold" ] [ text "Settings" ]
+            ]
+        , div [ class "flex-col w-100 items-start my-4 space-y-4 h-full" ]
+            [ div [ class optionContainer ]
+                [ label [ class "flex space-x-1 items-center", for "override-token" ]
+                    [ span [ class "text-xs font-medium" ] [ text "Override Token" ]
+
+                    -- , span [] [ tokenHelpIcon ]
+                    ]
+                , div [ class "flex items-center space-x-1" ]
+                    [ div [ class "flex-grow" ]
+                        [ input
+                            [ class underlineInput
+                            , class <|
+                                if model.overrideToken == "" then
+                                    "italic"
+
+                                else
+                                    ""
+                            , id "override-token"
+                            , onInput HandleOverrideTokenInput
+                            , value model.overrideToken
+                            , placeholder tokenPlaceholder
+                            ]
+                            []
+                        ]
+                    , a [ class linkText, onClick OpenToken ] [ text "Get Token" ]
+                    ]
+                ]
+            , div [ class optionContainer ]
+                [ label [ class "flex space-x-1 items-center", for "override-ttl" ]
+                    [ span [ class "text-xs font-medium" ] [ text "Override Time to Live (TTL)" ]
+                    , span [] [ ttlHelpIcon ]
+                    ]
+                , div [ class "flex space-x-4 items-center" ]
+                    [ ttlRadioOption ttlConfig.short
+                    , ttlRadioOption ttlConfig.medium
+                    , ttlRadioOption ttlConfig.long
+                    , ttlRadioOption ttlConfig.max
+                    ]
+                ]
+            ]
+        ]
+
+
 view : Model -> Html Msg
 view model =
-    let
-        bodyClasses =
-            "flex flex-col space-y-4 h-full w-screen p-4"
-    in
-    case model.activeTab of
-        MainTab ->
-            div [ class bodyClasses ]
-                [ renderHeader model
-                , div [ class "flex justify-left my-2" ]
-                    [ renderActionBar model ]
-                , renderFeatureFilter model
-                , div
-                    [ class "flex-grow" ]
-                    (if List.isEmpty model.activeOverrides && List.isEmpty model.inactiveOverrides then
-                        [ renderAddOverride { feature = model.feature }
-                        , div [ class "w-full mt-32 text-center" ] [ text "No overrides exist." ]
-                        ]
+    div [ class "flex flex-col space-y-4 h-screen w-screen p-4" ] <|
+        [ renderHeader model
+        , div [ class "swap" ] <|
+            [ div
+                [ class <|
+                    if model.activeTab == MainTab then
+                        "swap-off z-10"
 
-                     else
-                        [ renderAddOverride { feature = model.feature }
-
-                        -- Active overrides
-                        , Html.Keyed.node "div"
-                            [ class "flex flex-col w-full" ]
-                            (model.activeOverrides
-                                |> List.filter (.feature >> matchString model.featureFilter)
-                                |> List.map
-                                    (\override ->
-                                        ( String.fromInt override.id, renderActiveOverride override )
-                                    )
-                            )
-                        , div [ class "divider", classList [ ( "hidden", List.isEmpty model.inactiveOverrides ) ] ] [ text "Inactive" ]
-
-                        -- Inactive overrides
-                        , div [ class "flex flex-col w-full" ]
-                            (model.inactiveOverrides
-                                |> List.filter (.feature >> matchString model.featureFilter)
-                                |> List.map renderInactiveOverride
-                            )
-                        ]
-                    )
-                , renderFooter
+                    else
+                        "swap-on z-0"
                 ]
+                [ renderMainTab model ]
+            , div
+                [ class <|
+                    if model.activeTab == SettingsTab then
+                        "swap-off z-10"
 
-        ArchiveTab ->
-            div [ class bodyClasses ]
-                [ renderHeader model
-                , renderTabs model
-                , if List.isEmpty model.archivedOverrides then
-                    div [ class "w-full mt-32 text-center h-full" ] [ text "Archive is empty." ]
-
-                  else
-                    div [ class "overflow-y-scroll h-full" ]
-                        (List.map
-                            renderArchivedOverride
-                            model.archivedOverrides
-                        )
-                , renderFooter
+                    else
+                        "swap-on z-0"
                 ]
-
-        SettingsTab ->
-            let
-                -- tokenHelpIcon =
-                --     div [ class "tooltip", attribute "data-tip" "kk" ]
-                --         [ FeatherIcons.helpCircle
-                --             |> FeatherIcons.withSize 16
-                --             |> FeatherIcons.toHtml []
-                --         , div [ class tooltipBlockText, class "w-72" ]
-                --             [ span [] [ text "A token is necessary if:" ]
-                --             , ul [ class "list-disc list-inside" ]
-                --                 [ li [] [ text "using staging/prod AND" ]
-                --                 , li [] [ text "using a non-Dropbox account." ]
-                --                 ]
-                --             , span [] [ text "You must also be on the corporate VPN. A given token lasts for 24 hours and SOM will clear this field after that time." ]
-                --             ]
-                --         ]
-                ttlHelpIcon =
-                    div [ class "tooltip", attribute "data-tip" "Time to Live (TTL) is the amount of time that a Stormcrow override will stay active once set." ]
-                        [ FeatherIcons.helpCircle
-                            |> FeatherIcons.withSize 16
-                            |> FeatherIcons.toHtml []
-                        ]
-
-                tokenPlaceholder =
-                    "BQ8OS6e8J... *OR* &override_token=BQ8OS6e8J..."
-
-                ttlRadioOption : TtlConfigObject -> Html Msg
-                ttlRadioOption { htmlId, length, htmlText } =
-                    div [ class "flex space-x-1 cursor-pointer items-center" ]
-                        [ input [ type_ "radio", id htmlId, name "override-ttl", checked <| model.ttlLength == length, onCheck (\_ -> SetTtl length) ] []
-                        , label [ for htmlId ] [ text htmlText ]
-                        ]
-
-                optionContainer =
-                    "flex-col space-y-1 w-full border border-gray-700 py-4 px-2"
-            in
-            div [ class bodyClasses ]
-                [ renderHeader model
-                , div [ class "flex w-full justify-between items-center" ]
-                    [ span [ class "text-lg font-bold" ] [ text "Settings" ]
-                    ]
-                , div [ class "flex-col w-100 items-start my-4 space-y-4 h-full" ]
-                    [ div [ class optionContainer ]
-                        [ label [ class "flex space-x-1 items-center", for "override-token" ]
-                            [ span [ class "text-xs font-medium" ] [ text "Override Token" ]
-
-                            -- , span [] [ tokenHelpIcon ]
-                            ]
-                        , div [ class "flex items-center space-x-1" ]
-                            [ div [ class "flex-grow" ]
-                                [ input
-                                    [ class underlineInput
-                                    , class <|
-                                        if model.overrideToken == "" then
-                                            "italic"
-
-                                        else
-                                            ""
-                                    , id "override-token"
-                                    , onInput HandleOverrideTokenInput
-                                    , value model.overrideToken
-                                    , placeholder tokenPlaceholder
-                                    ]
-                                    []
-                                ]
-                            , a [ class linkText, onClick OpenToken ] [ text "Get Token" ]
-                            ]
-                        ]
-                    , div [ class optionContainer ]
-                        [ label [ class "flex space-x-1 items-center", for "override-ttl" ]
-                            [ span [ class "text-xs font-medium" ] [ text "Override Time to Live (TTL)" ]
-                            , span [] [ ttlHelpIcon ]
-                            ]
-                        , div [ class "flex space-x-4 items-center" ]
-                            [ ttlRadioOption ttlConfig.short
-                            , ttlRadioOption ttlConfig.medium
-                            , ttlRadioOption ttlConfig.long
-                            , ttlRadioOption ttlConfig.max
-                            ]
-                        ]
-                    ]
-                , renderFooter
-                ]
+                [ renderSettingsTab model ]
+            ]
+        , renderFooter
+        ]
