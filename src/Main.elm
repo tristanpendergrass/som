@@ -868,19 +868,6 @@ featureInputId =
     "feature-input"
 
 
-
--- renderClosedAddOverrideRow : Html Msg
--- renderClosedAddOverrideRow =
---     div [ class "flex w-full h-9 items-center space-x-2" ]
---         [ overrideAddToggleButton { isVisible = True, mode = Off }
---         , div
---             [ class "cursor-pointer"
---             , onClick (ToggleFeatureInput True)
---             ]
---             [ text "Add feature" ]
---         ]
-
-
 type ToggleButtonMode
     = On
     | Off
