@@ -908,10 +908,16 @@ overrideAddToggleButton { isVisible, isAdd } =
         ]
 
 
+infoBoxHeight : String
+infoBoxHeight =
+    -- This needs to be kept as a constant so the box can be animated to this height
+    "h-[5.5rem]"
+
+
 renderAddOverride : { feature : Maybe String } -> Html Msg
 renderAddOverride { feature } =
-    form [ onSubmit <| HandleAddOverrideSubmit { keepOpen = False } ]
-        [ div [ class "flex flex-col w-full space-y-1" ]
+    form [ onSubmit <| HandleAddOverrideSubmit { keepOpen = False }, class "flex flex-col space-y-1" ]
+        [ div [ class "flex flex-col w-full space-y-2" ]
             [ div [ class "flex w-full h-9 items-center space-x-2" ]
                 [ overrideAddToggleButton
                     { isVisible = True
@@ -932,7 +938,7 @@ renderAddOverride { feature } =
 
                         Nothing ->
                             div
-                                [ class "cursor-pointer"
+                                [ class "font-semibold cursor-pointer hover:text-primary"
                                 , onClick ToggleFeatureInput
                                 ]
                                 [ text "Add feature" ]
@@ -971,26 +977,29 @@ renderAddOverride { feature } =
                         div [] []
                 ]
             ]
-        , div [ class "w-full transition-height overflow-hidden", classList [ ( "h-[4.5rem]", Maybe.Extra.isJust feature ), ( "h-0", Maybe.Extra.isNothing feature ) ] ] [ renderAddOverrideInfo ]
+        , div
+            [ class "w-full transition-height overflow-hidden flex space-x-2"
+            , classList [ ( infoBoxHeight, Maybe.Extra.isJust feature ), ( "h-0", Maybe.Extra.isNothing feature ) ]
+            ]
+            [ overrideAddToggleButton { isVisible = False, isAdd = True }
+            , renderInfoBox
+            ]
         ]
 
 
-renderAddOverrideInfo : Html Msg
-renderAddOverrideInfo =
-    div [ class "w-full flex space-x-2" ]
-        [ overrideAddToggleButton { isVisible = False, isAdd = True }
-        , div [ class "flex flex-col flex-grow space-y-1" ]
-            [ div [ class "text-s flex items-center space-x-1" ]
-                [ FeatherIcons.info
-                    |> FeatherIcons.withSize 16
-                    |> FeatherIcons.withClass "inline-block"
-                    |> FeatherIcons.toHtml []
-                , span [] [ text "Supported syntax" ]
-                ]
-            , ul [ class "italic text-2xs list-disc pl-4" ]
-                [ li [] [ text "foo:bar" ]
-                , li [] [ text "foo" ]
-                , li [] [ text "www.dropbox.com/home?stormcrow_override=foo:bar" ]
+renderInfoBox : Html Msg
+renderInfoBox =
+    div [ class "w-full bg-info text-info-content rounded flex items-center space-x-3 px-3", class infoBoxHeight ]
+        [ FeatherIcons.info
+            |> FeatherIcons.withSize 16
+            |> FeatherIcons.withClass "inline-block"
+            |> FeatherIcons.toHtml []
+        , div [ class "flex flex-col space-y-1 flex-grow" ]
+            [ div [ class "font-bold text-xs" ] [ text "Supported formats" ]
+            , ul [ class "italic text-2xs " ]
+                [ li [] [ text "my_feature" ]
+                , li [] [ text "my_feature:V1" ]
+                , li [] [ text "www.dropbox.com/home?stormcrow_override=my_feature:V1" ]
                 ]
             ]
         ]
@@ -1003,10 +1012,12 @@ overrideCheckbox { isChecked, handleCheck } =
 
 overrideDeleteButton : { handleDelete : Msg } -> Html Msg
 overrideDeleteButton { handleDelete } =
-    button [ class "btn btn-square btn-ghost btn-sm", onClick handleDelete ]
-        [ FeatherIcons.trash2
-            |> FeatherIcons.withSize 12
-            |> FeatherIcons.toHtml []
+    div [ class "tooltip tooltip-left", attribute "data-tip" "Delete" ]
+        [ button [ class "btn btn-square btn-ghost btn-sm", onClick handleDelete ]
+            [ FeatherIcons.trash2
+                |> FeatherIcons.withSize 12
+                |> FeatherIcons.toHtml []
+            ]
         ]
 
 
@@ -1178,10 +1189,12 @@ renderActionBar model =
                 , text "Copy"
                 ]
             ]
-        , button [ class "btn btn-square btn-ghost btn-sm", onClick <| SetActiveTab SettingsTab ]
-            [ FeatherIcons.settings
-                |> FeatherIcons.withSize 16
-                |> FeatherIcons.toHtml []
+        , div [ class "tooltip tooltip-left", attribute "data-tip" "Settings" ]
+            [ button [ class "btn btn-square btn-ghost btn-sm", onClick <| SetActiveTab SettingsTab ]
+                [ FeatherIcons.settings
+                    |> FeatherIcons.withSize 16
+                    |> FeatherIcons.toHtml []
+                ]
             ]
         ]
 
