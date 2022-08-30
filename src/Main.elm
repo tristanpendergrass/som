@@ -1141,9 +1141,30 @@ renderArchivedOverride override =
         ]
 
 
-renderHeader : Html Msg
-renderHeader =
-    h1 [ class "text-xl text-left font-extrabold" ] [ text "Stormcrow Override Manager" ]
+renderHeader : Model -> Html Msg
+renderHeader model =
+    let
+        { settingsIconClass, closeIconClass, handleClick } =
+            case model.activeTab of
+                SettingsTab ->
+                    { settingsIconClass = "swap-on", closeIconClass = "swap-off", handleClick = SetActiveTab MainTab }
+
+                _ ->
+                    { settingsIconClass = "swap-off", closeIconClass = "swap-on", handleClick = SetActiveTab SettingsTab }
+    in
+    div [ class "w-full flex justify-between items-center" ]
+        [ div [ class "text-xl text-left font-extrabold" ] [ text "Stormcrow Override Manager" ]
+        , label [ class "btn btn-circle btn-ghost btn-sm swap swap-rotate", onClick handleClick ]
+            [ FeatherIcons.settings
+                |> FeatherIcons.withClass settingsIconClass
+                |> FeatherIcons.withSize 16
+                |> FeatherIcons.toHtml []
+            , FeatherIcons.x
+                |> FeatherIcons.withClass closeIconClass
+                |> FeatherIcons.withSize 16
+                |> FeatherIcons.toHtml []
+            ]
+        ]
 
 
 renderActionBar : Model -> Html Msg
@@ -1176,13 +1197,6 @@ renderActionBar model =
                 , text "Copy"
                 ]
             ]
-        , div [ class "tooltip tooltip-left", attribute "data-tip" "Settings" ]
-            [ button [ class "btn btn-square btn-ghost btn-sm", onClick <| SetActiveTab SettingsTab ]
-                [ FeatherIcons.settings
-                    |> FeatherIcons.withSize 16
-                    |> FeatherIcons.toHtml []
-                ]
-            ]
         ]
 
 
@@ -1211,7 +1225,7 @@ view model =
     case model.activeTab of
         MainTab ->
             div [ class bodyClasses ]
-                [ renderHeader
+                [ renderHeader model
                 , div [ class "flex justify-left my-2" ]
                     [ renderActionBar model ]
                 , renderFeatureFilter model
@@ -1250,7 +1264,7 @@ view model =
 
         ArchiveTab ->
             div [ class bodyClasses ]
-                [ renderHeader
+                [ renderHeader model
                 , renderTabs model
                 , if List.isEmpty model.archivedOverrides then
                     div [ class "w-full mt-32 text-center h-full" ] [ text "Archive is empty." ]
@@ -1301,15 +1315,9 @@ view model =
                     "flex-col space-y-1 w-full border border-gray-700 py-4 px-2"
             in
             div [ class bodyClasses ]
-                [ renderHeader
+                [ renderHeader model
                 , div [ class "flex w-full justify-between items-center" ]
                     [ span [ class "text-lg font-bold" ] [ text "Settings" ]
-                    , button [ class "btn btn-sm btn-ghost gap-2", onClick <| SetActiveTab MainTab ]
-                        [ FeatherIcons.arrowLeftCircle
-                            |> FeatherIcons.withSize 16
-                            |> FeatherIcons.toHtml []
-                        , text "Done"
-                        ]
                     ]
                 , div [ class "flex-col w-100 items-start my-4 space-y-4 h-full" ]
                     [ div [ class optionContainer ]
