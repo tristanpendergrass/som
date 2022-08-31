@@ -1292,7 +1292,7 @@ renderSettingsTab model =
         optionContainer =
             "flex-col space-y-1 w-full border border-gray-700 py-4 px-2"
     in
-    div [ class "h-[29rem]" ]
+    div [ class "h-[30rem] w-full flex flex-col" ]
         [ div [ class "flex w-full justify-between items-center" ]
             [ span [ class "text-lg font-bold" ] [ text "Settings" ]
             ]
@@ -1341,6 +1341,11 @@ renderSettingsTab model =
 
 view : Model -> Html Msg
 view model =
+    let
+        -- Pretty ugly hack but I couldn't get the widths to be consistent when switching tabs without this
+        tabWidthClass =
+            "w-[93vw]"
+    in
     div [ class "flex flex-col h-screen w-screen p-4" ] <|
         [ renderHeader model
         , div [ class "swap cursor-auto" ] <|
@@ -1351,6 +1356,7 @@ view model =
 
                     else
                         "swap-on z-0"
+                , class tabWidthClass
                 ]
                 [ renderMainTab model ]
             , div
@@ -1360,6 +1366,7 @@ view model =
 
                     else
                         "swap-on z-0"
+                , class tabWidthClass
                 ]
                 [ renderSettingsTab model ]
             ]
