@@ -928,7 +928,7 @@ renderAddOverride { feature } =
                                 [ class "font-semibold cursor-pointer hover:text-primary"
                                 , onClick ToggleFeatureInput
                                 ]
-                                [ text "Add feature" ]
+                                [ text "Add override" ]
                     ]
                 , case feature of
                     Just featureText ->
@@ -1292,7 +1292,7 @@ renderSettingsTab model =
         optionContainer =
             "flex-col space-y-1 w-full border border-gray-700 py-4 px-2"
     in
-    div [ class "h-[30rem] w-full flex flex-col" ]
+    div [ class "h-[31rem] w-full flex flex-col" ]
         [ div [ class "flex w-full justify-between items-center" ]
             [ span [ class "text-lg font-bold" ] [ text "Settings" ]
             ]
