@@ -1297,7 +1297,12 @@ renderSettingsTab model =
             [ span [ class "text-lg font-bold" ] [ text "Settings" ]
             ]
         , div [ class "flex-col w-100 items-start my-4 space-y-4 h-full" ]
-            [ div [ class optionContainer ]
+            [ div [class optionContainer] 
+                [ button [class "btn gap-2"]
+                    [ FeatherIcons.up
+
+                ]
+            , div [ class optionContainer ]
                 [ label [ class "flex space-x-1 items-center", for "override-token" ]
                     [ span [ class "text-xs font-medium" ] [ text "Override Token" ]
 
