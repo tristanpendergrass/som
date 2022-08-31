@@ -935,7 +935,7 @@ renderAddOverride { feature } =
                         div [ class "flex space-x-1" ]
                             [ div [ class "tooltip tooltip-left", attribute "data-tip" "Add Override" ]
                                 [ button
-                                    [ class "btn btn-sm btn-square btn-outline btn-primary"
+                                    [ class "btn btn-sm btn-square btn-primary"
                                     , disabled <| String.isEmpty featureText
                                     , onClick <| HandleAddOverrideSubmit { keepOpen = False }
                                     ]
@@ -946,7 +946,7 @@ renderAddOverride { feature } =
                                 ]
                             , div [ class "tooltip tooltip-left", attribute "data-tip" "Add and keep open" ]
                                 [ button
-                                    [ class "btn btn-sm btn-outline gap-2 btn-secondary"
+                                    [ class "btn btn-sm gap-2 btn-secondary"
                                     , disabled <| String.isEmpty featureText
                                     , onClick <| HandleAddOverrideSubmit { keepOpen = True }
                                     ]
@@ -1341,9 +1341,9 @@ renderSettingsTab model =
 
 view : Model -> Html Msg
 view model =
-    div [ class "flex flex-col space-y-4 h-screen w-screen p-4" ] <|
+    div [ class "flex flex-col h-screen w-screen p-4" ] <|
         [ renderHeader model
-        , div [ class "swap" ] <|
+        , div [ class "swap cursor-auto" ] <|
             [ div
                 [ class <|
                     if model.activeTab == MainTab then
