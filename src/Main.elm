@@ -5,7 +5,7 @@ port module Main exposing (main)
 import Browser
 import Browser.Dom
 import FeatherIcons
-import Html exposing (Html, a, button, div, form, h1, input, label, li, option, select, span, text, ul)
+import Html exposing (Html, a, button, div, form, h1, h2, input, label, li, option, select, span, text, textarea, ul)
 import Html.Attributes exposing (attribute, checked, class, classList, disabled, for, id, name, placeholder, selected, style, type_, value)
 import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
 import Html.Keyed
@@ -1290,17 +1290,52 @@ renderSettingsTab model =
                 ]
 
         optionContainer =
-            "flex-col space-y-1 w-full border border-gray-700 py-4 px-2"
+            "card w-full bg-base-100 shadow-xl"
     in
     div [ class "h-[31rem] w-full flex flex-col" ]
-        [ div [ class "flex w-full justify-between items-center" ]
+        [ div [ class "flex w-full justify-center items-center" ]
             [ span [ class "text-lg font-bold" ] [ text "Settings" ]
             ]
         , div [ class "flex-col w-100 items-start my-4 space-y-4 h-full" ]
-            [ div [class optionContainer] 
-                [ button [class "btn gap-2"]
-                    [ FeatherIcons.up
-
+            [ div [ class "w-full bg-base-200 rounded shadow-xl p-4 overflow-hidden" ]
+                [ div [ class "w-full flex flex-col space-y-2 h-[10rem]" ]
+                    [ h2 [ class "font-semibold text-lg" ] [ text "Extension Data" ]
+                    , div [ class "flex items-start h-full" ]
+                        [ div [ class "flex flex-col w-1/2 space-y-2 items-center" ]
+                            [ div [ class "relative" ]
+                                [ button [ class "btn btn-sm gap-2" ]
+                                    [ FeatherIcons.arrowUp
+                                        |> FeatherIcons.withSize 16
+                                        |> FeatherIcons.toHtml []
+                                    , text "Export"
+                                    ]
+                                , div
+                                    [ class "absolute bottom-[-2rem] w-[10.5rem] left-[50%] translate-x-[-50%]"
+                                    , class "bg-success text-success-content gap-2 flex px-2 items-center h-7 rounded shadow overflow-hidden text-2xs"
+                                    ]
+                                    [ FeatherIcons.check
+                                        |> FeatherIcons.withSize 16
+                                        |> FeatherIcons.toHtml []
+                                    , text "Data copied to clipboard"
+                                    ]
+                                ]
+                            ]
+                        , div [ class "divider divider-horizontal" ] []
+                        , div [ class "flex flex-col w-1/2 space-y-2 items-center" ]
+                            [ button [ class "btn btn-sm gap-2" ]
+                                [ FeatherIcons.arrowDown
+                                    |> FeatherIcons.withSize 16
+                                    |> FeatherIcons.toHtml []
+                                , text "Import"
+                                ]
+                            , textarea
+                                [ placeholder "Paste data here"
+                                , class "textarea textarea-secondary p-2 resize-none"
+                                ]
+                                []
+                            ]
+                        ]
+                    ]
                 ]
             , div [ class optionContainer ]
                 [ label [ class "flex space-x-1 items-center", for "override-token" ]
