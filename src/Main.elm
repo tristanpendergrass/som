@@ -33,8 +33,8 @@ type TtlLength
     | TtlMax
 
 
-ttlLengthDecoder : D.Decoder TtlLength
-ttlLengthDecoder =
+ttlLengthValueDecoder : D.Decoder TtlLength
+ttlLengthValueDecoder =
     D.string
         |> D.andThen
             (\ttlLength ->
@@ -219,7 +219,61 @@ type alias Model =
     , tokenCreatedAt : Maybe Time.Posix
     , ttlLength : TtlLength
     , showExportNotification : Bool
+    , extensionDataToImport : String
+    , importErr : Maybe D.Error
     }
+
+
+
+-- Decoders
+
+
+nonceDecoder : D.Decoder Int
+nonceDecoder =
+    D.oneOf
+        [ D.field "nonce" D.int
+        , D.succeed 100
+        ]
+
+
+overrideDecoder : D.Decoder Override
+overrideDecoder =
+    D.map4 Override
+        (D.field "id" D.int)
+        (D.field "feature" D.string)
+        (D.field "variantSelection" (D.map variantSelectionFromString D.string))
+        (D.field "customVariantText" D.string)
+
+
+activeOverridesDecoder : D.Decoder (List Override)
+activeOverridesDecoder =
+    D.field "activeOverrides" (D.list overrideDecoder)
+
+
+inactiveOverridesDecoder : D.Decoder (List Override)
+inactiveOverridesDecoder =
+    D.field "inactiveOverrides" (D.list overrideDecoder)
+
+
+overridesDecoder : D.Decoder ( List Override, List Override )
+overridesDecoder =
+    D.map2 Tuple.pair activeOverridesDecoder inactiveOverridesDecoder
+
+
+overrideTokenDecoder : D.Decoder String
+overrideTokenDecoder =
+    D.field "overrideToken" D.string
+
+
+tokenCreatedAtDecoder : D.Decoder (Maybe Time.Posix)
+tokenCreatedAtDecoder =
+    D.field "tokenCreatedAt" (D.nullable D.int)
+        |> D.map (Maybe.map Time.millisToPosix)
+
+
+ttlLengthDecoder : D.Decoder TtlLength
+ttlLengthDecoder =
+    D.field "ttlLength" ttlLengthValueDecoder
 
 
 init : ( String, D.Value ) -> ( Model, Cmd Msg )
@@ -227,77 +281,41 @@ init ( initialBrowserUrl, localStorageData ) =
     let
         nonce : Int
         nonce =
-            case D.decodeValue (D.field "nonce" D.int) localStorageData of
-                Ok val ->
-                    val
+            localStorageData
+                |> D.decodeValue (D.field "nonce" D.int)
+                |> Result.withDefault 100
 
-                Err _ ->
-                    100
+        activeOverrides =
+            localStorageData
+                |> D.decodeValue activeOverridesDecoder
+                |> Result.withDefault []
 
-        overrideDecoder : D.Decoder Override
-        overrideDecoder =
-            D.map4 Override
-                (D.field "id" D.int)
-                (D.field "feature" D.string)
-                (D.field "variantSelection" (D.map variantSelectionFromString D.string))
-                (D.field "customVariantText" D.string)
-
-        legacyOverrideDecoder : D.Decoder LegacyOverride
-        legacyOverrideDecoder =
-            D.map5 LegacyOverride
-                (D.field "id" D.int)
-                (D.field "feature" D.string)
-                (D.field "variantSelection" (D.map variantSelectionFromString D.string))
-                (D.field "customVariantText" D.string)
-                (D.field "isSelected" D.bool)
-
-        overridesFromLegacyOverrides : List LegacyOverride -> ( List Override, List Override )
-        overridesFromLegacyOverrides legacyOverrides =
-            let
-                newActiveOverrides =
-                    legacyOverrides
-                        |> List.filter .isSelected
-                        |> List.map legacyToNew
-
-                newInactiveOverrides =
-                    legacyOverrides
-                        |> List.filter (.isSelected >> not)
-                        |> List.map legacyToNew
-            in
-            ( newActiveOverrides, newInactiveOverrides )
-
-        legacyOverridesDecoder : D.Decoder ( List Override, List Override )
-        legacyOverridesDecoder =
-            D.map overridesFromLegacyOverrides (D.field "overrides" (D.list legacyOverrideDecoder))
-
-        overridesDecoder : D.Decoder ( List Override, List Override )
-        overridesDecoder =
-            D.map2 Tuple.pair (D.field "activeOverrides" (D.list overrideDecoder)) (D.field "inactiveOverrides" (D.list overrideDecoder))
-
-        -- We have to use oneOf here to try two different decoders because some clients will have the old format of `overrides` in local storage instead of the current format `(activeOverrides, inactiveOverrides)`
-        ( activeOverrides, inactiveOverrides ) =
-            D.decodeValue (D.oneOf [ legacyOverridesDecoder, overridesDecoder ]) localStorageData
-                |> Result.withDefault ( [], [] )
+        inactiveOverrides =
+            localStorageData
+                |> D.decodeValue inactiveOverridesDecoder
+                |> Result.withDefault []
 
         archivedOverrides : List Override
         archivedOverrides =
-            D.decodeValue (D.field "archivedOverrides" (D.list overrideDecoder)) localStorageData
+            localStorageData
+                |> D.decodeValue (D.field "archivedOverrides" (D.list overrideDecoder))
                 |> Result.withDefault []
 
         overrideToken : String
         overrideToken =
-            D.decodeValue (D.field "overrideToken" D.string) localStorageData
+            localStorageData
+                |> D.decodeValue overrideTokenDecoder
                 |> Result.withDefault ""
 
         tokenCreatedAt : Maybe Time.Posix
         tokenCreatedAt =
-            D.decodeValue (D.field "tokenCreatedAt" D.int) localStorageData
-                |> Result.map (Time.millisToPosix >> Just)
+            localStorageData
+                |> D.decodeValue tokenCreatedAtDecoder
                 |> Result.withDefault Nothing
 
         ttlLength : TtlLength
         ttlLength =
-            D.decodeValue (D.field "ttlLength" ttlLengthDecoder) localStorageData
+            D.decodeValue (D.field "ttlLength" ttlLengthValueDecoder) localStorageData
                 |> Result.withDefault TtlMedium
 
         model : Model
@@ -314,11 +332,37 @@ init ( initialBrowserUrl, localStorageData ) =
             , tokenCreatedAt = tokenCreatedAt
             , ttlLength = ttlLength
             , showExportNotification = False
+            , extensionDataToImport = ""
+            , importErr = Nothing
             }
     in
     ( model
     , Task.perform CheckIfTokenExpired Time.now
     )
+
+
+extensionDataDecoder : Model -> D.Decoder Model
+extensionDataDecoder oldModel =
+    let
+        createNewModel : Int -> List Override -> List Override -> String -> Maybe Time.Posix -> TtlLength -> Model
+        createNewModel nonce activeOverrides inactiveOverrides overrideToken tokenCreatedAt ttlLength =
+            { nonce = nonce
+            , browserUrl = oldModel.browserUrl
+            , activeOverrides = activeOverrides
+            , inactiveOverrides = inactiveOverrides
+            , archivedOverrides = []
+            , feature = Nothing
+            , featureFilter = ""
+            , activeTab = oldModel.activeTab
+            , overrideToken = overrideToken
+            , tokenCreatedAt = tokenCreatedAt
+            , ttlLength = ttlLength
+            , showExportNotification = oldModel.showExportNotification
+            , extensionDataToImport = oldModel.extensionDataToImport
+            , importErr = Nothing
+            }
+    in
+    D.map6 createNewModel nonceDecoder activeOverridesDecoder inactiveOverridesDecoder overrideTokenDecoder tokenCreatedAtDecoder ttlLengthDecoder
 
 
 
@@ -431,6 +475,8 @@ type Msg
     | SetTtl TtlLength
     | CopyOverridesToClipboard
     | ExportExtensionData
+    | ImportExtensionData
+    | HandleExtensionDataInput String
       -- Add Override
     | ToggleFeatureInput
     | HandleAddOverrideFeatureInput String
@@ -702,6 +748,35 @@ update msg model =
               -- Intentionally not writing the showExportNotification = True to the encoded model since it shouldn't be
             , writeToClipboard <| E.encode 0 (encodeModel model)
             )
+
+        ImportExtensionData ->
+            let
+                decodeResult =
+                    model.extensionDataToImport
+                        |> D.decodeString (extensionDataDecoder model)
+
+                newModel =
+                    case decodeResult of
+                        Ok res ->
+                            res
+
+                        Err decodeError ->
+                            { model | importErr = Just decodeError }
+
+                -- newModel =
+                --     model.extensionDataToImport
+                --         |> D.decodeString (extensionDataDecoder model)
+                --         |> Result.withDefault model
+                --         |> (\oldModel -> { oldModel | extensionDataToImport = "" })
+            in
+            ( newModel, sendToLocalStorage <| encodeModel newModel )
+
+        HandleExtensionDataInput newValue ->
+            let
+                newModel =
+                    { model | extensionDataToImport = newValue }
+            in
+            ( newModel, sendToLocalStorage <| encodeModel newModel )
 
         ToggleFeatureInput ->
             let
@@ -1335,17 +1410,41 @@ renderSettingsTab model =
                             ]
                         , div [ class "divider divider-horizontal" ] []
                         , div [ class "flex flex-col w-1/2 space-y-2 items-center" ]
-                            [ button [ class "btn btn-sm gap-2", disabled True ]
+                            [ button [ class "btn btn-sm gap-2", disabled (String.isEmpty model.extensionDataToImport), onClick ImportExtensionData ]
                                 [ FeatherIcons.arrowDown
                                     |> FeatherIcons.withSize 16
                                     |> FeatherIcons.toHtml []
                                 , text "Import"
                                 ]
-                            , textarea
-                                [ placeholder "Paste data here"
-                                , class "textarea textarea-secondary p-2 resize-none"
-                                ]
-                                []
+                            , case model.importErr of
+                                Nothing ->
+                                    textarea
+                                        [ placeholder "Paste data here"
+                                        , class "textarea textarea-secondary p-2 resize-none leading-tight text-2xs h-20"
+                                        , value model.extensionDataToImport
+                                        , onInput HandleExtensionDataInput
+                                        ]
+                                        []
+
+                                Just (D.Field str _) ->
+                                    div [] [ text str ]
+
+                                Just (D.Index _ _) ->
+                                    div [] [ text "Index" ]
+
+                                Just (D.OneOf _) ->
+                                    div [] [ text "OneOf" ]
+
+                                Just (D.Failure _ _) ->
+                                    div [] [ text "Failure" ]
+
+                            -- , textarea
+                            --     [ placeholder "Paste data here"
+                            --     , class "textarea textarea-secondary p-2 resize-none leading-tight text-2xs h-20"
+                            --     , value model.extensionDataToImport
+                            --     , onInput HandleExtensionDataInput
+                            --     ]
+                            --     []
                             ]
                         ]
                     ]
