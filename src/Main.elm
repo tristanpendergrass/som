@@ -218,6 +218,7 @@ type alias Model =
     , overrideToken : String
     , tokenCreatedAt : Maybe Time.Posix
     , ttlLength : TtlLength
+    , showExportNotification : Bool
     }
 
 
@@ -312,6 +313,7 @@ init ( initialBrowserUrl, localStorageData ) =
             , overrideToken = overrideToken
             , tokenCreatedAt = tokenCreatedAt
             , ttlLength = ttlLength
+            , showExportNotification = False
             }
     in
     ( model
@@ -427,7 +429,8 @@ type Msg
     | SetTokenCreatedAt (Maybe Time.Posix)
     | CheckIfTokenExpired Time.Posix
     | SetTtl TtlLength
-    | Export
+    | CopyOverridesToClipboard
+    | ExportExtensionData
       -- Add Override
     | ToggleFeatureInput
     | HandleAddOverrideFeatureInput String
@@ -691,8 +694,14 @@ update msg model =
             in
             ( newModel, sendToLocalStorage <| encodeModel newModel )
 
-        Export ->
+        CopyOverridesToClipboard ->
             ( model, writeToClipboard <| makeQueryString model.ttlLength model.overrideToken model.activeOverrides )
+
+        ExportExtensionData ->
+            ( { model | showExportNotification = True }
+              -- Intentionally not writing the showExportNotification = True to the encoded model since it shouldn't be
+            , writeToClipboard <| E.encode 0 (encodeModel model)
+            )
 
         ToggleFeatureInput ->
             let
@@ -1188,7 +1197,7 @@ renderActionBar model =
                 ]
             , button
                 [ class "btn btn-secondary btn-sm gap-2 text-secondary-content"
-                , onClick Export
+                , onClick CopyOverridesToClipboard
                 , disabled isDisabled
                 ]
                 [ FeatherIcons.clipboard
@@ -1303,7 +1312,7 @@ renderSettingsTab model =
                     , div [ class "flex items-start h-full" ]
                         [ div [ class "flex flex-col w-1/2 space-y-2 items-center" ]
                             [ div [ class "relative" ]
-                                [ button [ class "btn btn-sm gap-2" ]
+                                [ button [ class "btn btn-sm gap-2", onClick ExportExtensionData ]
                                     [ FeatherIcons.arrowUp
                                         |> FeatherIcons.withSize 16
                                         |> FeatherIcons.toHtml []
@@ -1312,6 +1321,10 @@ renderSettingsTab model =
                                 , div
                                     [ class "absolute bottom-[-2rem] w-[10.5rem] left-[50%] translate-x-[-50%]"
                                     , class "bg-success text-success-content gap-2 flex px-2 items-center h-7 rounded shadow overflow-hidden text-2xs"
+
+                                    -- handle the fade in
+                                    , classList [ ( "opacity-100", model.showExportNotification ), ( "opacity-0", not model.showExportNotification ) ]
+                                    , class "transition-opacity duration-100"
                                     ]
                                     [ FeatherIcons.check
                                         |> FeatherIcons.withSize 16
@@ -1322,7 +1335,7 @@ renderSettingsTab model =
                             ]
                         , div [ class "divider divider-horizontal" ] []
                         , div [ class "flex flex-col w-1/2 space-y-2 items-center" ]
-                            [ button [ class "btn btn-sm gap-2" ]
+                            [ button [ class "btn btn-sm gap-2", disabled True ]
                                 [ FeatherIcons.arrowDown
                                     |> FeatherIcons.withSize 16
                                     |> FeatherIcons.toHtml []
