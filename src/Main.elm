@@ -598,6 +598,7 @@ update msg model =
 
                     else
                         model.feature
+                , showExportNotification = False
               }
             , Cmd.none
             )
@@ -910,7 +911,7 @@ renderAddOverride { feature } =
                                 , id featureInputId
                                 , placeholder "feature_name"
                                 , value featureText
-                                , class "input input-xs input-bordered w-full"
+                                , class "input input-xs input-bordered w-full input-primary"
                                 , onInput HandleAddOverrideFeatureInput
                                 ]
                                 []
@@ -1038,7 +1039,7 @@ renderActiveOverride override =
                 [ type_ "text"
                 , id <| domIdForCustomVariantInput override
                 , value override.customVariantText
-                , class "input input-bordered input-xs w-full"
+                , class "input input-bordered input-xs w-full input-warning"
                 , style "min-width" "20px"
                 , onInput <| HandleCustomVariantInput override
                 ]
@@ -1262,12 +1263,12 @@ renderSettingsTab : Model -> Html Msg
 renderSettingsTab model =
     let
         optionContainer =
-            "w-full bg-base-200 rounded shadow-xl p-4"
+            "w-full bg-base-300 rounded shadow-xl p-4"
 
         optionTitle =
             "font-semibold text-lg"
     in
-    div [ class "h-[29rem] w-full flex flex-col pt-4" ]
+    div [ class "h-[29rem] w-full flex flex-col pt-3" ]
         [ div [ class "flex w-full justify-center items-center" ]
             [ span [ class "text-3xl font-bold" ] [ text "Settings" ]
             ]
