@@ -6,7 +6,7 @@ import Browser
 import Browser.Dom
 import FeatherIcons
 import Html exposing (Html, a, button, div, form, h1, h2, input, label, li, option, select, span, text, textarea, ul)
-import Html.Attributes exposing (attribute, checked, class, classList, disabled, for, id, name, placeholder, selected, style, type_, value)
+import Html.Attributes exposing (attribute, checked, class, classList, disabled, for, href, id, name, placeholder, selected, style, type_, value)
 import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
 import Html.Keyed
 import Json.Decode as D
@@ -220,7 +220,7 @@ type alias Model =
     , ttlLength : TtlLength
     , showExportNotification : Bool
     , extensionDataToImport : String
-    , importErr : Maybe D.Error
+    , importHasErr : Bool
     }
 
 
@@ -333,7 +333,7 @@ init ( initialBrowserUrl, localStorageData ) =
             , ttlLength = ttlLength
             , showExportNotification = False
             , extensionDataToImport = ""
-            , importErr = Nothing
+            , importHasErr = False
             }
     in
     ( model
@@ -359,7 +359,7 @@ extensionDataDecoder oldModel =
             , ttlLength = ttlLength
             , showExportNotification = oldModel.showExportNotification
             , extensionDataToImport = oldModel.extensionDataToImport
-            , importErr = Nothing
+            , importHasErr = False
             }
     in
     D.map6 createNewModel nonceDecoder activeOverridesDecoder inactiveOverridesDecoder overrideTokenDecoder tokenCreatedAtDecoder ttlLengthDecoder
@@ -751,30 +751,20 @@ update msg model =
 
         ImportExtensionData ->
             let
-                decodeResult =
+                newModel =
                     model.extensionDataToImport
                         |> D.decodeString (extensionDataDecoder model)
-
-                newModel =
-                    case decodeResult of
-                        Ok res ->
-                            res
-
-                        Err decodeError ->
-                            { model | importErr = Just decodeError }
-
-                -- newModel =
-                --     model.extensionDataToImport
-                --         |> D.decodeString (extensionDataDecoder model)
-                --         |> Result.withDefault model
-                --         |> (\oldModel -> { oldModel | extensionDataToImport = "" })
+                        -- If successful change tab to Main
+                        |> Result.map (\updatedModel -> { updatedModel | activeTab = MainTab, extensionDataToImport = "" })
+                        -- If failure make textarea an error
+                        |> Result.withDefault { model | importHasErr = True }
             in
             ( newModel, sendToLocalStorage <| encodeModel newModel )
 
         HandleExtensionDataInput newValue ->
             let
                 newModel =
-                    { model | extensionDataToImport = newValue }
+                    { model | extensionDataToImport = newValue, importHasErr = False }
             in
             ( newModel, sendToLocalStorage <| encodeModel newModel )
 
@@ -1374,16 +1364,19 @@ renderSettingsTab model =
                 ]
 
         optionContainer =
-            "card w-full bg-base-100 shadow-xl"
+            "w-full bg-base-200 rounded shadow-xl p-4 overflow-hidden"
+
+        optionTitle =
+            "font-semibold text-lg"
     in
     div [ class "h-[31rem] w-full flex flex-col" ]
         [ div [ class "flex w-full justify-center items-center" ]
             [ span [ class "text-lg font-bold" ] [ text "Settings" ]
             ]
         , div [ class "flex-col w-100 items-start my-4 space-y-4 h-full" ]
-            [ div [ class "w-full bg-base-200 rounded shadow-xl p-4 overflow-hidden" ]
+            [ div [ class optionContainer ]
                 [ div [ class "w-full flex flex-col space-y-2 h-[10rem]" ]
-                    [ h2 [ class "font-semibold text-lg" ] [ text "Extension Data" ]
+                    [ h2 [ class optionTitle ] [ text "Extension Data" ]
                     , div [ class "flex items-start h-full" ]
                         [ div [ class "flex flex-col w-1/2 space-y-2 items-center" ]
                             [ div [ class "relative" ]
@@ -1416,63 +1409,32 @@ renderSettingsTab model =
                                     |> FeatherIcons.toHtml []
                                 , text "Import"
                                 ]
-                            , case model.importErr of
-                                Nothing ->
-                                    textarea
-                                        [ placeholder "Paste data here"
-                                        , class "textarea textarea-secondary p-2 resize-none leading-tight text-2xs h-20"
-                                        , value model.extensionDataToImport
-                                        , onInput HandleExtensionDataInput
-                                        ]
-                                        []
-
-                                Just (D.Field str _) ->
-                                    div [] [ text str ]
-
-                                Just (D.Index _ _) ->
-                                    div [] [ text "Index" ]
-
-                                Just (D.OneOf _) ->
-                                    div [] [ text "OneOf" ]
-
-                                Just (D.Failure _ _) ->
-                                    div [] [ text "Failure" ]
-
-                            -- , textarea
-                            --     [ placeholder "Paste data here"
-                            --     , class "textarea textarea-secondary p-2 resize-none leading-tight text-2xs h-20"
-                            --     , value model.extensionDataToImport
-                            --     , onInput HandleExtensionDataInput
-                            --     ]
-                            --     []
+                            , textarea
+                                [ placeholder "Paste data here"
+                                , class "textarea textarea-secondary p-2 resize-none leading-tight text-2xs h-20"
+                                , classList [ ( "textarea-error", model.importHasErr ) ]
+                                , value model.extensionDataToImport
+                                , onInput HandleExtensionDataInput
+                                ]
+                                []
                             ]
                         ]
                     ]
                 ]
             , div [ class optionContainer ]
-                [ label [ class "flex space-x-1 items-center", for "override-token" ]
-                    [ span [ class "text-xs font-medium" ] [ text "Override Token" ]
-
-                    -- , span [] [ tokenHelpIcon ]
-                    ]
-                , div [ class "flex items-center space-x-1" ]
-                    [ div [ class "flex-grow" ]
-                        [ input
-                            [ class underlineInput
-                            , class <|
-                                if model.overrideToken == "" then
-                                    "italic"
-
-                                else
-                                    ""
+                [ div [ class "flex items-center space-x-4 pr-4" ]
+                    [ div [ class "form-control flex-grow" ]
+                        [ label [ class "label pt-0", for "override-token" ]
+                            [ text "Override Token" ]
+                        , input
+                            [ class "input input-bordered input-sm w-full"
                             , id "override-token"
                             , onInput HandleOverrideTokenInput
                             , value model.overrideToken
-                            , placeholder tokenPlaceholder
                             ]
                             []
                         ]
-                    , a [ class linkText, onClick OpenToken ] [ text "Get Token" ]
+                    , a [ class "link link-primary inline-block mt-[1.5rem]", href "https://www.dropbox.com/admin/stormcrow#/override", onClick OpenToken ] [ text "Get Token" ]
                     ]
                 ]
             , div [ class optionContainer ]
