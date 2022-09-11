@@ -26,90 +26,6 @@ main =
     Browser.element { init = init, update = update, view = view, subscriptions = subscriptions }
 
 
-type TtlLength
-    = TtlShort
-    | TtlMedium
-    | TtlLong
-    | TtlMax
-
-
-ttlLengthValueDecoder : D.Decoder TtlLength
-ttlLengthValueDecoder =
-    D.string
-        |> D.andThen
-            (\ttlLength ->
-                case ttlLength of
-                    "ttlShort" ->
-                        D.succeed TtlShort
-
-                    "ttlMedium" ->
-                        D.succeed TtlMedium
-
-                    "ttlLong" ->
-                        D.succeed TtlLong
-
-                    "ttlMax" ->
-                        D.succeed TtlMax
-
-                    _ ->
-                        D.fail "ttlLength not recognized"
-            )
-
-
-ttlLengthEncoder : TtlLength -> E.Value
-ttlLengthEncoder ttlLength =
-    case ttlLength of
-        TtlShort ->
-            E.string "ttlShort"
-
-        TtlMedium ->
-            E.string "ttlMedium"
-
-        TtlLong ->
-            E.string "ttlLong"
-
-        TtlMax ->
-            E.string "ttlMax"
-
-
-type alias TtlConfigObject =
-    { length : TtlLength
-    , seconds : Int
-    , htmlId : String
-    , htmlText : String
-    }
-
-
-ttlConfig :
-    { short : TtlConfigObject
-    , medium : TtlConfigObject
-    , long : TtlConfigObject
-    , max : TtlConfigObject
-    }
-ttlConfig =
-    { short = { length = TtlShort, seconds = 60 * 5, htmlId = "ttl-short", htmlText = "5 min" }
-    , medium = { length = TtlMedium, seconds = 60 * 60, htmlId = "ttl-medium", htmlText = "1 hour" }
-    , long = { length = TtlLong, seconds = 60 * 60 * 24, htmlId = "ttl-long", htmlText = "24 hours" }
-    , max = { length = TtlMax, seconds = 60 * 60 * 24 * 30, htmlId = "ttl-max", htmlText = "30 days (max)" }
-    }
-
-
-queryTtlSeconds : TtlLength -> Int
-queryTtlSeconds ttlLength =
-    case ttlLength of
-        TtlShort ->
-            ttlConfig.short.seconds
-
-        TtlMedium ->
-            ttlConfig.medium.seconds
-
-        TtlLong ->
-            ttlConfig.long.seconds
-
-        TtlMax ->
-            ttlConfig.max.seconds
-
-
 {-| Used to filter features by the input of the user
 -}
 matchString : String -> String -> Bool
@@ -217,7 +133,6 @@ type alias Model =
     , activeTab : ActiveTab
     , overrideToken : String
     , tokenCreatedAt : Maybe Time.Posix
-    , ttlLength : TtlLength
     , showExportNotification : Bool
     , extensionDataToImport : String
     , importHasErr : Bool
@@ -271,11 +186,6 @@ tokenCreatedAtDecoder =
         |> D.map (Maybe.map Time.millisToPosix)
 
 
-ttlLengthDecoder : D.Decoder TtlLength
-ttlLengthDecoder =
-    D.field "ttlLength" ttlLengthValueDecoder
-
-
 init : ( String, D.Value ) -> ( Model, Cmd Msg )
 init ( initialBrowserUrl, localStorageData ) =
     let
@@ -313,11 +223,6 @@ init ( initialBrowserUrl, localStorageData ) =
                 |> D.decodeValue tokenCreatedAtDecoder
                 |> Result.withDefault Nothing
 
-        ttlLength : TtlLength
-        ttlLength =
-            D.decodeValue (D.field "ttlLength" ttlLengthValueDecoder) localStorageData
-                |> Result.withDefault TtlMedium
-
         model : Model
         model =
             { nonce = nonce
@@ -330,7 +235,6 @@ init ( initialBrowserUrl, localStorageData ) =
             , activeTab = MainTab
             , overrideToken = overrideToken
             , tokenCreatedAt = tokenCreatedAt
-            , ttlLength = ttlLength
             , showExportNotification = False
             , extensionDataToImport = ""
             , importHasErr = False
@@ -344,8 +248,8 @@ init ( initialBrowserUrl, localStorageData ) =
 extensionDataDecoder : Model -> D.Decoder Model
 extensionDataDecoder oldModel =
     let
-        createNewModel : Int -> List Override -> List Override -> String -> Maybe Time.Posix -> TtlLength -> Model
-        createNewModel nonce activeOverrides inactiveOverrides overrideToken tokenCreatedAt ttlLength =
+        createNewModel : Int -> List Override -> List Override -> String -> Maybe Time.Posix -> Model
+        createNewModel nonce activeOverrides inactiveOverrides overrideToken tokenCreatedAt =
             { nonce = nonce
             , browserUrl = oldModel.browserUrl
             , activeOverrides = activeOverrides
@@ -356,13 +260,12 @@ extensionDataDecoder oldModel =
             , activeTab = oldModel.activeTab
             , overrideToken = overrideToken
             , tokenCreatedAt = tokenCreatedAt
-            , ttlLength = ttlLength
             , showExportNotification = oldModel.showExportNotification
             , extensionDataToImport = oldModel.extensionDataToImport
             , importHasErr = False
             }
     in
-    D.map6 createNewModel nonceDecoder activeOverridesDecoder inactiveOverridesDecoder overrideTokenDecoder tokenCreatedAtDecoder ttlLengthDecoder
+    D.map5 createNewModel nonceDecoder activeOverridesDecoder inactiveOverridesDecoder overrideTokenDecoder tokenCreatedAtDecoder
 
 
 
@@ -400,7 +303,6 @@ encodeModel model =
         , ( "archivedOverrides", E.list overrideToJson model.archivedOverrides )
         , ( "overrideToken", E.string model.overrideToken )
         , ( "tokenCreatedAt", Json.Encode.Extra.maybe (Time.posixToMillis >> E.int) model.tokenCreatedAt )
-        , ( "ttlLength", ttlLengthEncoder model.ttlLength )
         ]
 
 
@@ -429,13 +331,13 @@ applyOverrides overrides oldQueryParams =
             oldQueryParams
 
 
-makeQueryString : TtlLength -> String -> List Override -> String
-makeQueryString ttlLength token overrides =
+makeQueryString : String -> List Override -> String
+makeQueryString token overrides =
     let
         newQueryParams =
             []
                 |> applyOverrides overrides
-                |> QueryParams.setTtl (String.fromInt (queryTtlSeconds ttlLength))
+                |> QueryParams.setTtl (String.fromInt (60 * 60 * 24))
                 |> QueryParams.setToken token
     in
     QueryParams.toString newQueryParams
@@ -443,14 +345,14 @@ makeQueryString ttlLength token overrides =
         |> Maybe.withDefault ""
 
 
-makeUrl : TtlLength -> String -> List Override -> Url -> Url
-makeUrl ttlLength token overrides oldUrl =
+makeUrl : String -> List Override -> Url -> Url
+makeUrl token overrides oldUrl =
     let
         newQueryParams =
             QueryParams.fromUrl oldUrl
                 |> List.filter (QueryParams.isStormcrowParam >> not)
                 |> applyOverrides overrides
-                |> QueryParams.setTtl (String.fromInt (queryTtlSeconds ttlLength))
+                |> QueryParams.setTtl (String.fromInt (60 * 60 * 24))
                 |> QueryParams.setToken token
 
         newUrl : Url
@@ -472,7 +374,6 @@ type Msg
     | HandleOverrideTokenInput String
     | SetTokenCreatedAt (Maybe Time.Posix)
     | CheckIfTokenExpired Time.Posix
-    | SetTtl TtlLength
     | CopyOverridesToClipboard
     | ExportExtensionData
     | ImportExtensionData
@@ -666,7 +567,7 @@ update msg model =
                     let
                         newUrl : Url
                         newUrl =
-                            makeUrl model.ttlLength model.overrideToken model.activeOverrides oldUrl
+                            makeUrl model.overrideToken model.activeOverrides oldUrl
                     in
                     ( model, sendUrl <| Url.toString newUrl )
 
@@ -732,16 +633,8 @@ update msg model =
             in
             ( newModel, sendToLocalStorage <| encodeModel newModel )
 
-        SetTtl ttlLength ->
-            let
-                newModel : Model
-                newModel =
-                    { model | ttlLength = ttlLength }
-            in
-            ( newModel, sendToLocalStorage <| encodeModel newModel )
-
         CopyOverridesToClipboard ->
-            ( model, writeToClipboard <| makeQueryString model.ttlLength model.overrideToken model.activeOverrides )
+            ( model, writeToClipboard <| makeQueryString model.overrideToken model.activeOverrides )
 
         ExportExtensionData ->
             ( { model | showExportNotification = True }
@@ -1226,7 +1119,7 @@ renderHeader model =
                 _ ->
                     { settingsIconClass = "swap-off", closeIconClass = "swap-on", handleClick = SetActiveTab SettingsTab }
     in
-    div [ class "w-full flex justify-between items-center" ]
+    div [ class "w-full flex justify-between items-center bg-neutral text-neutral-content p-4" ]
         [ div [ class "text-xl text-left font-extrabold" ] [ text "Stormcrow Override Manager" ]
         , label [ class "btn btn-circle btn-ghost btn-sm swap swap-rotate", onClick handleClick ]
             [ FeatherIcons.settings
@@ -1276,10 +1169,10 @@ renderActionBar model =
 
 renderFooter : Html Msg
 renderFooter =
-    div [ class "flex justify-between items-center" ]
-        [ div [ class "text-gray-500" ] [ text "Feedback? Message @tristanp" ]
+    div [ class "flex justify-between items-center p-4 bg-neutral text-neutral-content" ]
+        [ div [] [ text "Feedback? Message @tristanp" ]
         , div [ class "flex items-center space-x-1" ]
-            [ div [ class "text-gray-500" ] [ text "v2.6" ]
+            [ div [] [ text "v2.6" ]
             , button [ class iconButton, class "flex items-center space-x-1 py-0", onClick OpenGithub ]
                 [ div [] [ text "GitHub" ]
                 , FeatherIcons.externalLink
@@ -1292,7 +1185,7 @@ renderFooter =
 
 renderMainTab : Model -> Html Msg
 renderMainTab model =
-    div [ class "h-[29rem]" ]
+    div [ class "h-[27rem]" ]
         [ div [ class "flex justify-left my-2" ]
             [ renderActionBar model ]
         , renderFeatureFilter model
@@ -1332,46 +1225,15 @@ renderMainTab model =
 renderSettingsTab : Model -> Html Msg
 renderSettingsTab model =
     let
-        -- tokenHelpIcon =
-        --     div [ class "tooltip", attribute "data-tip" "kk" ]
-        --         [ FeatherIcons.helpCircle
-        --             |> FeatherIcons.withSize 16
-        --             |> FeatherIcons.toHtml []
-        --         , div [ class tooltipBlockText, class "w-72" ]
-        --             [ span [] [ text "A token is necessary if:" ]
-        --             , ul [ class "list-disc list-inside" ]
-        --                 [ li [] [ text "using staging/prod AND" ]
-        --                 , li [] [ text "using a non-Dropbox account." ]
-        --                 ]
-        --             , span [] [ text "You must also be on the corporate VPN. A given token lasts for 24 hours and SOM will clear this field after that time." ]
-        --             ]
-        --         ]
-        ttlHelpIcon =
-            div [ class "tooltip", attribute "data-tip" "Time to Live (TTL) is the amount of time that a Stormcrow override will stay active once set." ]
-                [ FeatherIcons.helpCircle
-                    |> FeatherIcons.withSize 16
-                    |> FeatherIcons.toHtml []
-                ]
-
-        tokenPlaceholder =
-            "BQ8OS6e8J... *OR* &override_token=BQ8OS6e8J..."
-
-        ttlRadioOption : TtlConfigObject -> Html Msg
-        ttlRadioOption { htmlId, length, htmlText } =
-            div [ class "flex space-x-1 cursor-pointer items-center" ]
-                [ input [ type_ "radio", id htmlId, name "override-ttl", checked <| model.ttlLength == length, onCheck (\_ -> SetTtl length) ] []
-                , label [ for htmlId ] [ text htmlText ]
-                ]
-
         optionContainer =
             "w-full bg-base-200 rounded shadow-xl p-4 overflow-hidden"
 
         optionTitle =
             "font-semibold text-lg"
     in
-    div [ class "h-[31rem] w-full flex flex-col" ]
+    div [ class "h-[29rem] w-full flex flex-col pt-4" ]
         [ div [ class "flex w-full justify-center items-center" ]
-            [ span [ class "text-lg font-bold" ] [ text "Settings" ]
+            [ span [ class "text-4xl font-bold" ] [ text "Settings" ]
             ]
         , div [ class "flex-col w-100 items-start my-4 space-y-4 h-full" ]
             [ div [ class optionContainer ]
@@ -1437,18 +1299,6 @@ renderSettingsTab model =
                     , a [ class "link link-primary inline-block mt-[1.5rem]", href "https://www.dropbox.com/admin/stormcrow#/override", onClick OpenToken ] [ text "Get Token" ]
                     ]
                 ]
-            , div [ class optionContainer ]
-                [ label [ class "flex space-x-1 items-center", for "override-ttl" ]
-                    [ span [ class "text-xs font-medium" ] [ text "Override Time to Live (TTL)" ]
-                    , span [] [ ttlHelpIcon ]
-                    ]
-                , div [ class "flex space-x-4 items-center" ]
-                    [ ttlRadioOption ttlConfig.short
-                    , ttlRadioOption ttlConfig.medium
-                    , ttlRadioOption ttlConfig.long
-                    , ttlRadioOption ttlConfig.max
-                    ]
-                ]
             ]
         ]
 
@@ -1460,9 +1310,9 @@ view model =
         tabWidthClass =
             "w-[93vw]"
     in
-    div [ class "flex flex-col h-screen w-screen p-4" ] <|
+    div [ class "flex flex-col h-screen w-screen" ] <|
         [ renderHeader model
-        , div [ class "swap cursor-auto" ] <|
+        , div [ class "swap cursor-auto h-[81vh]" ] <|
             [ div
                 [ class <|
                     if model.activeTab == MainTab then
