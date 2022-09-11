@@ -1211,19 +1211,19 @@ defaultTheme =
     "corporate"
 
 
-renderThemeChange : Html Msg
-renderThemeChange =
-    div [ class "dropdown dropdown-top" ]
-        [ div [ tabindex 0, class "btn gap-1 normal-case" ]
-            [ FeatherIcons.edit2
+renderThemeChange : { selectedTheme : String } -> Html Msg
+renderThemeChange { selectedTheme } =
+    div [ class "dropdown" ]
+        [ div [ tabindex 0, class "btn btn-primary btn-sm gap-2 normal-case" ]
+            [ FeatherIcons.edit3
                 |> FeatherIcons.withSize 12
                 |> FeatherIcons.toHtml []
-            , text "Theme"
+            , text selectedTheme
             , FeatherIcons.arrowDown
                 |> FeatherIcons.withSize 12
                 |> FeatherIcons.toHtml []
             ]
-        , div [ class "dropdown-content bg-base-200 text-base-content rounded-t-box rounded-b-box top-px max-h-96 h-[70vh] w-52 overflow-y-auto shadow-2xl mt-16" ]
+        , div [ class "dropdown-content bg-base-200 text-base-content rounded-t-box rounded-b-box top-px max-h-96 h-[60vh] w-52 overflow-y-auto shadow-2xl mt-12" ]
             [ div [ class "grid grid-cols-1 gap-3 p-3", tabindex 0 ]
                 (themes
                     |> List.map
@@ -1270,11 +1270,24 @@ renderSettingsTab model =
     in
     div [ class "h-[29rem] w-full flex flex-col pt-3" ]
         [ div [ class "flex w-full justify-center items-center" ]
-            [ span [ class "text-3xl font-bold" ] [ text "Settings" ]
+            [ span [ class "text-xl font-bold" ] [ text "Settings" ]
             ]
         , div [ class "flex-col w-100 items-start my-4 space-y-4 h-full" ]
-            [ div [ class optionContainer ]
-                [ div [ class "w-full flex flex-col space-y-2 h-[10rem]" ]
+            [ div [ class optionContainer, class "flex flex-col space-y-1" ]
+                [ h2 [ class optionTitle ] [ text "Theme" ]
+                , div [ class "flex items-center justify-between space-x-1" ]
+                    [ renderThemeChange { selectedTheme = model.theme }
+                    , button
+                        [ class "btn btn-primary btn-sm"
+                        , classList [ ( "invisible", model.theme == defaultTheme ) ]
+                        , onClick <| SetTheme defaultTheme
+                        , attribute "data-theme" defaultTheme
+                        ]
+                        [ text "Default" ]
+                    ]
+                ]
+            , div [ class optionContainer ]
+                [ div [ class "w-full flex flex-col space-y-2 h-[9rem]" ]
                     [ h2 [ class optionTitle ] [ text "Extension Data" ]
                     , div [ class "flex items-start h-full" ]
                         [ div [ class "flex flex-col w-1/2 space-y-2 items-center" ]
@@ -1310,7 +1323,7 @@ renderSettingsTab model =
                                 ]
                             , textarea
                                 [ placeholder "Paste data here"
-                                , class "textarea textarea-secondary p-2 resize-none leading-tight text-2xs h-20"
+                                , class "textarea textarea-secondary p-2 resize-none leading-tight text-2xs h-16"
                                 , classList [ ( "textarea-error", model.importHasErr ) ]
                                 , value model.extensionDataToImport
                                 , onInput HandleExtensionDataInput
@@ -1335,9 +1348,6 @@ renderSettingsTab model =
                         ]
                     , a [ class "link link-primary inline-block mt-[1.5rem]", href "https://www.dropbox.com/admin/stormcrow#/override", onClick OpenToken ] [ text "Get Token" ]
                     ]
-                ]
-            , div [ class optionContainer ]
-                [ renderThemeChange
                 ]
             ]
         ]
