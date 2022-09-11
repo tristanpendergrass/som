@@ -6,7 +6,7 @@ import Browser
 import Browser.Dom
 import FeatherIcons
 import Html exposing (Html, a, button, div, form, h1, h2, input, label, li, option, select, span, text, textarea, ul)
-import Html.Attributes exposing (attribute, checked, class, classList, disabled, for, href, id, name, placeholder, selected, style, type_, value)
+import Html.Attributes exposing (attribute, checked, class, classList, disabled, for, href, id, name, placeholder, selected, style, tabindex, type_, value)
 import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
 import Html.Keyed
 import Json.Decode as D
@@ -136,6 +136,7 @@ type alias Model =
     , showExportNotification : Bool
     , extensionDataToImport : String
     , importHasErr : Bool
+    , theme : String
     }
 
 
@@ -186,6 +187,11 @@ tokenCreatedAtDecoder =
         |> D.map (Maybe.map Time.millisToPosix)
 
 
+themeDecoder : D.Decoder String
+themeDecoder =
+    D.field "theme" D.string
+
+
 init : ( String, D.Value ) -> ( Model, Cmd Msg )
 init ( initialBrowserUrl, localStorageData ) =
     let
@@ -223,6 +229,12 @@ init ( initialBrowserUrl, localStorageData ) =
                 |> D.decodeValue tokenCreatedAtDecoder
                 |> Result.withDefault Nothing
 
+        theme : String
+        theme =
+            localStorageData
+                |> D.decodeValue themeDecoder
+                |> Result.withDefault defaultTheme
+
         model : Model
         model =
             { nonce = nonce
@@ -238,6 +250,7 @@ init ( initialBrowserUrl, localStorageData ) =
             , showExportNotification = False
             , extensionDataToImport = ""
             , importHasErr = False
+            , theme = theme
             }
     in
     ( model
@@ -248,8 +261,8 @@ init ( initialBrowserUrl, localStorageData ) =
 extensionDataDecoder : Model -> D.Decoder Model
 extensionDataDecoder oldModel =
     let
-        createNewModel : Int -> List Override -> List Override -> String -> Maybe Time.Posix -> Model
-        createNewModel nonce activeOverrides inactiveOverrides overrideToken tokenCreatedAt =
+        createNewModel : Int -> List Override -> List Override -> String -> Maybe Time.Posix -> String -> Model
+        createNewModel nonce activeOverrides inactiveOverrides overrideToken tokenCreatedAt theme =
             { nonce = nonce
             , browserUrl = oldModel.browserUrl
             , activeOverrides = activeOverrides
@@ -263,9 +276,10 @@ extensionDataDecoder oldModel =
             , showExportNotification = oldModel.showExportNotification
             , extensionDataToImport = oldModel.extensionDataToImport
             , importHasErr = False
+            , theme = theme
             }
     in
-    D.map5 createNewModel nonceDecoder activeOverridesDecoder inactiveOverridesDecoder overrideTokenDecoder tokenCreatedAtDecoder
+    D.map6 createNewModel nonceDecoder activeOverridesDecoder inactiveOverridesDecoder overrideTokenDecoder tokenCreatedAtDecoder themeDecoder
 
 
 
@@ -303,6 +317,7 @@ encodeModel model =
         , ( "archivedOverrides", E.list overrideToJson model.archivedOverrides )
         , ( "overrideToken", E.string model.overrideToken )
         , ( "tokenCreatedAt", Json.Encode.Extra.maybe (Time.posixToMillis >> E.int) model.tokenCreatedAt )
+        , ( "theme", E.string model.theme )
         ]
 
 
@@ -378,6 +393,7 @@ type Msg
     | ExportExtensionData
     | ImportExtensionData
     | HandleExtensionDataInput String
+    | SetTheme String
       -- Add Override
     | ToggleFeatureInput
     | HandleAddOverrideFeatureInput String
@@ -572,7 +588,19 @@ update msg model =
                     ( model, sendUrl <| Url.toString newUrl )
 
         SetActiveTab activeTab ->
-            ( { model | activeTab = activeTab }, Cmd.none )
+            ( { model
+                | activeTab = activeTab
+
+                -- Annoys me that if you open the feature input then change to settings then change back it's still open
+                , feature =
+                    if model.feature == Just "" then
+                        Nothing
+
+                    else
+                        model.feature
+              }
+            , Cmd.none
+            )
 
         OpenGithub ->
             ( model, createTab "https://github.com/tristanpendergrass/som" )
@@ -658,6 +686,13 @@ update msg model =
             let
                 newModel =
                     { model | extensionDataToImport = newValue, importHasErr = False }
+            in
+            ( newModel, sendToLocalStorage <| encodeModel newModel )
+
+        SetTheme theme ->
+            let
+                newModel =
+                    { model | theme = theme }
             in
             ( newModel, sendToLocalStorage <| encodeModel newModel )
 
@@ -818,16 +853,6 @@ subscriptions _ =
 underlineInput : String
 underlineInput =
     "ml-0 mt-0 block w-full border-0 border-b-2 border-gray-200 focus:outline-none focus:ring-0 focus:border-gray-900"
-
-
-iconButton : String
-iconButton =
-    "icon-button p-1 rounded group focus:outline-none hover:bg-gray-100"
-
-
-linkText : String
-linkText =
-    "text-blue-500 hover:text-blue-400 font-bold uppercase px-3 py-1 text-xs mr-1 mb-1 cursor-pointer"
 
 
 featureInputId : String
@@ -1057,57 +1082,6 @@ renderFeatureFilter model =
         []
 
 
-renderTabs : Model -> Html Msg
-renderTabs model =
-    div [ class "tabs" ]
-        [ a
-            [ class "tab tab-bordered tab-md"
-            , class <|
-                if model.activeTab == MainTab then
-                    "tab-active"
-
-                else
-                    ""
-            , onClick (SetActiveTab MainTab)
-            ]
-            [ text "Main" ]
-        , a
-            [ class "tab tab-bordered tab-md"
-            , class <|
-                if model.activeTab == SettingsTab then
-                    "tab-active"
-
-                else
-                    ""
-            , onClick (SetActiveTab SettingsTab)
-            ]
-            [ text "Settings" ]
-        ]
-
-
-renderArchivedOverride : Override -> Html Msg
-renderArchivedOverride override =
-    div [ class "flex items-center" ]
-        [ div [ class "tooltip", attribute "data-tip" "Unarchive" ]
-            [ button [ class iconButton, onClick (Unarchive override) ]
-                [ FeatherIcons.rotateCcw
-                    |> FeatherIcons.withSize 12
-                    |> FeatherIcons.withClass "text-blue-500"
-                    |> FeatherIcons.toHtml []
-                ]
-            ]
-        , div [ class "flex-grow truncate" ] [ text override.feature ]
-        , div [ class "tooltip", attribute "data-tip" "Permanently Delete" ]
-            [ button [ class iconButton, onClick (Delete override) ]
-                [ FeatherIcons.trash2
-                    |> FeatherIcons.withSize 12
-                    |> FeatherIcons.withClass "text-red-500"
-                    |> FeatherIcons.toHtml []
-                ]
-            ]
-        ]
-
-
 renderHeader : Model -> Html Msg
 renderHeader model =
     let
@@ -1173,7 +1147,7 @@ renderFooter =
         [ div [] [ text "Feedback? Message @tristanp" ]
         , div [ class "flex items-center space-x-1" ]
             [ div [] [ text "v2.6" ]
-            , button [ class iconButton, class "flex items-center space-x-1 py-0", onClick OpenGithub ]
+            , button [ class "flex items-center space-x-1 py-0", onClick OpenGithub ]
                 [ div [] [ text "GitHub" ]
                 , FeatherIcons.externalLink
                     |> FeatherIcons.withSize 12
@@ -1222,18 +1196,80 @@ renderMainTab model =
         ]
 
 
+
+-- Theme Changer
+
+
+themes : List String
+themes =
+    [ "light", "dark", "cupcake", "bumblebee", "emerald", "corporate", "synthwave", "retro", "cyberpunk", "valentine", "halloween", "garden", "forest", "aqua", "lofi", "pastel", "fantasy", "wireframe", "black", "luxury", "dracula", "cmyk", "autumn", "business", "acid", "lemonade", "night", "coffee", "winter" ]
+
+
+defaultTheme : String
+defaultTheme =
+    "corporate"
+
+
+renderThemeChange : Html Msg
+renderThemeChange =
+    div [ class "dropdown dropdown-top" ]
+        [ div [ tabindex 0, class "btn gap-1 normal-case" ]
+            [ FeatherIcons.edit2
+                |> FeatherIcons.withSize 12
+                |> FeatherIcons.toHtml []
+            , text "Theme"
+            , FeatherIcons.arrowDown
+                |> FeatherIcons.withSize 12
+                |> FeatherIcons.toHtml []
+            ]
+        , div [ class "dropdown-content bg-base-200 text-base-content rounded-t-box rounded-b-box top-px max-h-96 h-[70vh] w-52 overflow-y-auto shadow-2xl mt-16" ]
+            [ div [ class "grid grid-cols-1 gap-3 p-3", tabindex 0 ]
+                (themes
+                    |> List.map
+                        (\theme ->
+                            div
+                                [ class "outline-base-content overflow-hidden rounded-lg outline outline-2 outline-offset-2"
+                                , classList
+                                    [ ( "outline-base-content", True )
+                                    , ( "outline-accent", False )
+                                    ]
+                                , onClick (SetTheme theme)
+                                ]
+                                [ div
+                                    [ attribute "data-theme" theme
+                                    , class "bg-base-100 text-base-content w-full cursor-pointer font-sans"
+                                    ]
+                                    [ div [ class "grid grid-cols-5 grid-rows-3" ]
+                                        [ div [ class "col-span-5 row-span-3 row-start-1 flex gap-1 py-3 px-4" ]
+                                            [ div [ class "flex-grow text-sm font-bold" ] [ text theme ]
+                                            , div [ class "flex flex-shrink-0 flex-wrap gap-1" ]
+                                                [ div [ class "bg-primary w-2 rounded" ] []
+                                                , div [ class "bg-secondary w-2 rounded" ] []
+                                                , div [ class "bg-accent w-2 rounded" ] []
+                                                , div [ class "bg-neutral w-2 rounded" ] []
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                ]
+                        )
+                )
+            ]
+        ]
+
+
 renderSettingsTab : Model -> Html Msg
 renderSettingsTab model =
     let
         optionContainer =
-            "w-full bg-base-200 rounded shadow-xl p-4 overflow-hidden"
+            "w-full bg-base-200 rounded shadow-xl p-4"
 
         optionTitle =
             "font-semibold text-lg"
     in
     div [ class "h-[29rem] w-full flex flex-col pt-4" ]
         [ div [ class "flex w-full justify-center items-center" ]
-            [ span [ class "text-4xl font-bold" ] [ text "Settings" ]
+            [ span [ class "text-3xl font-bold" ] [ text "Settings" ]
             ]
         , div [ class "flex-col w-100 items-start my-4 space-y-4 h-full" ]
             [ div [ class optionContainer ]
@@ -1299,6 +1335,9 @@ renderSettingsTab model =
                     , a [ class "link link-primary inline-block mt-[1.5rem]", href "https://www.dropbox.com/admin/stormcrow#/override", onClick OpenToken ] [ text "Get Token" ]
                     ]
                 ]
+            , div [ class optionContainer ]
+                [ renderThemeChange
+                ]
             ]
         ]
 
@@ -1310,7 +1349,7 @@ view model =
         tabWidthClass =
             "w-[93vw]"
     in
-    div [ class "flex flex-col h-screen w-screen" ] <|
+    div [ class "flex flex-col h-screen w-screen", attribute "data-theme" model.theme ] <|
         [ renderHeader model
         , div [ class "swap cursor-auto h-[81vh]" ] <|
             [ div
