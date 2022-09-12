@@ -1362,24 +1362,24 @@ view model =
     in
     div [ class "flex flex-col h-screen w-screen overflow-hidden", attribute "data-theme" model.theme ] <|
         [ renderHeader model
-        , div [ class "swap cursor-auto h-[81vh] overflow-y-scroll" ] <|
+        , div [ class "h-[81vh] overflow-y-auto px-4 py-2" ] <|
             [ div
                 [ class <|
                     if model.activeTab == MainTab then
-                        "swap-off z-10"
+                        "z-10"
 
                     else
-                        "swap-on z-0"
+                        "hidden z-0"
                 , class tabWidthClass
                 ]
                 [ renderMainTab model ]
             , div
                 [ class <|
                     if model.activeTab == SettingsTab then
-                        "swap-off z-10"
+                        "z-10"
 
                     else
-                        "swap-on z-0"
+                        "hidden z-0"
                 , class tabWidthClass
                 ]
                 [ renderSettingsTab model ]
