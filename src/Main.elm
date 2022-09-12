@@ -7,7 +7,7 @@ import Browser.Dom
 import FeatherIcons
 import Html exposing (Html, a, button, div, form, h1, h2, input, label, li, option, select, span, text, textarea, ul)
 import Html.Attributes exposing (attribute, checked, class, classList, disabled, for, href, id, name, placeholder, selected, style, tabindex, type_, value)
-import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
+import Html.Events exposing (onBlur, onCheck, onClick, onInput, onSubmit)
 import Html.Keyed
 import Json.Decode as D
 import Json.Encode as E
@@ -397,6 +397,7 @@ type Msg
       -- Add Override
     | ToggleFeatureInput
     | HandleAddOverrideFeatureInput String
+    | HandleAddOverrideFeatureBlur
     | HandleAddOverrideSubmit { keepOpen : Bool }
       -- Edit Override
     | HandleVariantSelectionInput Override String
@@ -714,6 +715,13 @@ update msg model =
         HandleAddOverrideFeatureInput feature ->
             ( { model | feature = Just feature }, Cmd.none )
 
+        HandleAddOverrideFeatureBlur ->
+            if model.feature == Just "" then
+                ( { model | feature = Nothing }, Cmd.none )
+
+            else
+                noOp
+
         HandleAddOverrideSubmit { keepOpen } ->
             case model.feature of
                 Nothing ->
@@ -913,6 +921,7 @@ renderAddOverride { feature } =
                                 , value featureText
                                 , class "input input-xs input-bordered w-full input-primary"
                                 , onInput HandleAddOverrideFeatureInput
+                                , onBlur HandleAddOverrideFeatureBlur
                                 ]
                                 []
 
@@ -1147,7 +1156,7 @@ renderFooter =
     div [ class "flex justify-between items-center p-4 bg-neutral text-neutral-content" ]
         [ div [] [ text "Feedback? Message @tristanp" ]
         , div [ class "flex items-center space-x-1" ]
-            [ div [] [ text "v2.6" ]
+            [ div [] [ text "v3.0" ]
             , button [ class "flex items-center space-x-1 py-0", onClick OpenGithub ]
                 [ div [] [ text "GitHub" ]
                 , FeatherIcons.externalLink
