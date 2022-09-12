@@ -1263,12 +1263,12 @@ renderSettingsTab : Model -> Html Msg
 renderSettingsTab model =
     let
         optionContainer =
-            "w-full bg-base-300 rounded shadow-xl p-4"
+            "w-full bg-base-300 rounded shadow-xl p-3"
 
         optionTitle =
             "font-semibold text-lg"
     in
-    div [ class "h-[29rem] w-full flex flex-col pt-3" ]
+    div [ class "h-[27rem] w-full flex flex-col pt-3 overflow-hidden" ]
         [ div [ class "flex w-full justify-center items-center" ]
             [ span [ class "text-xl font-bold" ] [ text "Settings" ]
             ]
@@ -1358,7 +1358,7 @@ view model =
     let
         -- Pretty ugly hack but I couldn't get the widths to be consistent when switching tabs without this
         tabWidthClass =
-            "w-[89vw]"
+            "w-full"
     in
     div [ class "flex flex-col h-screen w-screen overflow-hidden", attribute "data-theme" model.theme ] <|
         [ renderHeader model
