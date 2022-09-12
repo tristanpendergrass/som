@@ -1358,11 +1358,11 @@ view model =
     let
         -- Pretty ugly hack but I couldn't get the widths to be consistent when switching tabs without this
         tabWidthClass =
-            "w-[93vw]"
+            "w-[89vw]"
     in
-    div [ class "flex flex-col h-screen w-screen", attribute "data-theme" model.theme ] <|
+    div [ class "flex flex-col h-screen w-screen overflow-hidden", attribute "data-theme" model.theme ] <|
         [ renderHeader model
-        , div [ class "swap cursor-auto h-[81vh]" ] <|
+        , div [ class "swap cursor-auto h-[81vh] overflow-y-scroll" ] <|
             [ div
                 [ class <|
                     if model.activeTab == MainTab then

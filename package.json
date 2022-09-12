@@ -22,7 +22,9 @@
   },
   "watch": {
     "build": {
-      "patterns": ["src/*"],
+      "patterns": [
+        "src/*"
+      ],
       "extensions": "elm,js,html,css"
     }
   }
