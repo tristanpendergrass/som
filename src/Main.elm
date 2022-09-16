@@ -901,11 +901,39 @@ infoBoxHeight =
     -- This needs to be kept as a constant so the box can be animated to this height
     "h-[5.5rem]"
 
+renderAddOverrideButtons : {isDisabled: Bool, isVisible: Bool} -> Html Msg
+renderAddOverrideButtons {isDisabled, isVisible} =
+    div [ class "flex space-x-1", classList [("invisible", not isVisible)] ]
+        [ div [ class "tooltip tooltip-left", attribute "data-tip" "Add Override" ]
+            [ button
+                [ class "btn btn-sm btn-square btn-primary"
+                , disabled isDisabled
+                , onClick <| HandleAddOverrideSubmit { keepOpen = False }
+                ]
+                [ FeatherIcons.check
+                    |> FeatherIcons.withSize 12
+                    |> FeatherIcons.toHtml []
+                ]
+            ]
+        , div [ class "tooltip tooltip-left", attribute "data-tip" "Add and keep open" ]
+            [ button
+                [ class "btn btn-sm gap-2 btn-secondary"
+                , disabled isDisabled
+                , onClick <| HandleAddOverrideSubmit { keepOpen = True }
+                ]
+                [ FeatherIcons.check
+                    |> FeatherIcons.withSize 12
+                    |> FeatherIcons.toHtml []
+                , FeatherIcons.refreshCcw
+                    |> FeatherIcons.withSize 12
+                    |> FeatherIcons.toHtml []
+                ]
+            ]
+        ]
 
 renderAddOverride : { feature : Maybe String } -> Html Msg
 renderAddOverride { feature } =
     form [ onSubmit <| HandleAddOverrideSubmit { keepOpen = False }, class "flex flex-col space-y-1" ]
-        [ div [ class "flex flex-col w-full space-y-2" ]
             [ div [ class "flex w-full h-9 items-center space-x-2" ]
                 [ overrideAddToggleButton
                     { isVisible = True
@@ -921,7 +949,7 @@ renderAddOverride { feature } =
                                 , value featureText
                                 , class "input input-xs input-bordered w-full input-primary"
                                 , onInput HandleAddOverrideFeatureInput
-                                , onBlur HandleAddOverrideFeatureBlur
+                                -- , onBlur HandleAddOverrideFeatureBlur -- This causes a bug where when you click the close button the input remains open.
                                 ]
                                 []
 
@@ -934,44 +962,18 @@ renderAddOverride { feature } =
                     ]
                 , case feature of
                     Just featureText ->
-                        div [ class "flex space-x-1" ]
-                            [ div [ class "tooltip tooltip-left", attribute "data-tip" "Add Override" ]
-                                [ button
-                                    [ class "btn btn-sm btn-square btn-primary"
-                                    , disabled <| String.isEmpty featureText
-                                    , onClick <| HandleAddOverrideSubmit { keepOpen = False }
-                                    ]
-                                    [ FeatherIcons.check
-                                        |> FeatherIcons.withSize 12
-                                        |> FeatherIcons.toHtml []
-                                    ]
-                                ]
-                            , div [ class "tooltip tooltip-left", attribute "data-tip" "Add and keep open" ]
-                                [ button
-                                    [ class "btn btn-sm gap-2 btn-secondary"
-                                    , disabled <| String.isEmpty featureText
-                                    , onClick <| HandleAddOverrideSubmit { keepOpen = True }
-                                    ]
-                                    [ FeatherIcons.check
-                                        |> FeatherIcons.withSize 12
-                                        |> FeatherIcons.toHtml []
-                                    , FeatherIcons.refreshCcw
-                                        |> FeatherIcons.withSize 12
-                                        |> FeatherIcons.toHtml []
-                                    ]
-                                ]
-                            ]
+                        renderAddOverrideButtons {isDisabled = featureText == "", isVisible = True}
 
                     Nothing ->
                         div [] []
                 ]
-            ]
         , div
-            [ class "w-full transition-height overflow-hidden flex space-x-2"
+            [ class "w-full transition-height overflow-hidden flex space-x-2 items-center"
             , classList [ ( infoBoxHeight, Maybe.Extra.isJust feature ), ( "h-0", Maybe.Extra.isNothing feature ) ]
             ]
             [ overrideAddToggleButton { isVisible = False, isAdd = True }
-            , renderInfoBox
+            , div [class "flex-grow"] [renderInfoBox]
+            , renderAddOverrideButtons {isVisible = False, isDisabled = False}
             ]
         ]
 
