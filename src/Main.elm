@@ -1292,7 +1292,7 @@ renderSettingsTab model =
                         , onClick <| SetTheme defaultTheme
                         , attribute "data-theme" defaultTheme
                         ]
-                        [ text "Default" ]
+                        [ text "Restore Default" ]
                     ]
                 ]
             , div [ class optionContainer ]
@@ -1355,7 +1355,7 @@ renderSettingsTab model =
                             ]
                             []
                         ]
-                    , a [ class "link link-primary inline-block mt-[1.5rem]", href "https://www.dropbox.com/admin/stormcrow#/override", onClick OpenToken ] [ text "Get Token" ]
+                    , a [ class "link link-primary inline-block mt-[1.5rem] text-lg", href "https://www.dropbox.com/admin/stormcrow#/override", onClick OpenToken ] [ text "Get Token" ]
                     ]
                 ]
             ]
