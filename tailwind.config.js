@@ -7,6 +7,15 @@ module.exports = {
     extend: {
       transitionProperty: {
         'height': 'height',
+      },
+      animation: {
+        'flash': 'flash 1s linear'
+      },
+      keyframes: {
+        'flash': {
+          '0%': {'background-color': 'hsl(var(--a))'},
+          '100%': {'background-color': 'hsl(var(--b1))'}
+        }
       }
     },
   },

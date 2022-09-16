@@ -76,7 +76,7 @@ variantSelectionFromString value =
 
 legacyToNew : LegacyOverride -> Override
 legacyToNew { id, feature, variantSelection, customVariantText } =
-    { id = id, feature = feature, variantSelection = variantSelection, customVariantText = customVariantText }
+    { id = id, feature = feature, variantSelection = variantSelection, customVariantText = customVariantText, isAnimating = False }
 
 
 
@@ -104,6 +104,7 @@ type alias Override =
     , feature : Feature
     , variantSelection : VariantSelection
     , customVariantText : String
+    , isAnimating : Bool
     }
 
 
@@ -120,7 +121,6 @@ type ActiveTab
     = MainTab
     | ArchiveTab
     | SettingsTab
-
 
 type alias Model =
     { nonce : Int
@@ -154,11 +154,12 @@ nonceDecoder =
 
 overrideDecoder : D.Decoder Override
 overrideDecoder =
-    D.map4 Override
+    D.map5 Override
         (D.field "id" D.int)
         (D.field "feature" D.string)
         (D.field "variantSelection" (D.map variantSelectionFromString D.string))
         (D.field "customVariantText" D.string)
+        ((D.succeed False))
 
 
 activeOverridesDecoder : D.Decoder (List Override)
@@ -486,13 +487,13 @@ incrementNonce model =
 createOverride : Int -> String -> String -> Override
 createOverride id featureName value =
     if String.toUpper value == "ON" then
-        Override id featureName OnVariant ""
+        Override id featureName OnVariant "" True
 
     else if String.toUpper value == "OFF" then
-        Override id featureName OffVariant ""
+        Override id featureName OffVariant "" True
 
     else
-        Override id featureName CustomVariant value
+        Override id featureName CustomVariant value True
 
 
 addSubmittedOverride : ( String, String ) -> Model -> Model
@@ -510,7 +511,7 @@ addSubmittedOverrides submittedOverrides model =
 
 addInactiveOverride : Override -> Model -> Model
 addInactiveOverride override model =
-    { model | inactiveOverrides = override :: model.inactiveOverrides }
+    { model | inactiveOverrides = {override | isAnimating = True} :: model.inactiveOverrides }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -827,7 +828,7 @@ update msg model =
                 newModel =
                     model
                         |> removeOverride override
-                        |> addToList override
+                        |> addToList {override | isAnimating = True }
             in
             ( newModel, sendToLocalStorage <| encodeModel newModel )
 
@@ -1034,7 +1035,7 @@ renderActiveOverride override =
         baseColors =
             "bg-base-200 text-base-content"
     in
-    div [ class "flex w-full h-9 items-center space-x-2" ]
+    div [ class "flex w-full h-9 items-center space-x-2", classList [("animate-flash", override.isAnimating)] ]
         [ overrideCheckbox { isChecked = True, handleCheck = ToggleSelectOverride override }
         , div [ class "flex-grow" ]
             [ input
@@ -1074,7 +1075,7 @@ renderActiveOverride override =
 
 renderInactiveOverride : Override -> Html Msg
 renderInactiveOverride override =
-    div [ class "flex w-full h-9 items-center space-x-2" ]
+    div [ class "flex w-full h-9 items-center space-x-2", classList [("animate-flash", override.isAnimating)] ]
         [ overrideCheckbox { isChecked = False, handleCheck = ToggleSelectOverride override }
         , div [ class "flex-grow pl-2" ] [ div [] [ text override.feature ] ]
         , overrideDeleteButton { handleDelete = Archive override }
