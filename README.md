@@ -17,20 +17,19 @@ Then go to [chrome://extensions](chrome://extensions) and click "Load unpacked" 
 
 ## Development
 
-This command starts a tailwind watcher that recompiles the needed css:
+In one tab run this command to start the Tailwind CSS build watcher:
 
 ```
-$ npx tailwindcss -i ./src/index.css -o ./dist/index.css --watch
+$ npm run build:css:watch
 ```
 
-and this command starts a build with watch (execute in separate terminal tab):
+and in another tab run this command to build everything else:
 
 ```
 $ npm run build:watch
 ```
 
 You do not have to go through the "Load unpacked" step from installation again, just close and reopen the extension to see your changes.
-
 
 ## Test
 
