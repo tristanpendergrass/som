@@ -31,6 +31,13 @@ $ npm run build:watch
 
 You do not have to go through the "Load unpacked" step from installation again, just close and reopen the extension to see your changes.
 
+## Deployment
+
+- Bump the version number in static/manifest.json.
+- Bump the version number in Main.elm.
+- Run the above commands from Development to generate an up-to-date /dist folder.
+- Compress the /dist folder and upload to Chrome web store or wherever.
+
 ## Test
 
 Tests are in /tests. Written using https://github.com/elm-explorations/test.
