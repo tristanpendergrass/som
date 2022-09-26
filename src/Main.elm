@@ -122,6 +122,7 @@ type ActiveTab
     | ArchiveTab
     | SettingsTab
 
+
 type alias Model =
     { nonce : Int
     , browserUrl : Maybe Url
@@ -159,7 +160,7 @@ overrideDecoder =
         (D.field "feature" D.string)
         (D.field "variantSelection" (D.map variantSelectionFromString D.string))
         (D.field "customVariantText" D.string)
-        ((D.succeed False))
+        (D.succeed False)
 
 
 activeOverridesDecoder : D.Decoder (List Override)
@@ -511,7 +512,7 @@ addSubmittedOverrides submittedOverrides model =
 
 addInactiveOverride : Override -> Model -> Model
 addInactiveOverride override model =
-    { model | inactiveOverrides = {override | isAnimating = True} :: model.inactiveOverrides }
+    { model | inactiveOverrides = { override | isAnimating = True } :: model.inactiveOverrides }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -828,7 +829,7 @@ update msg model =
                 newModel =
                     model
                         |> removeOverride override
-                        |> addToList {override | isAnimating = True }
+                        |> addToList { override | isAnimating = True }
             in
             ( newModel, sendToLocalStorage <| encodeModel newModel )
 
@@ -902,9 +903,10 @@ infoBoxHeight =
     -- This needs to be kept as a constant so the box can be animated to this height
     "h-[5.5rem]"
 
-renderAddOverrideButtons : {isDisabled: Bool, isVisible: Bool} -> Html Msg
-renderAddOverrideButtons {isDisabled, isVisible} =
-    div [ class "flex space-x-1", classList [("invisible", not isVisible)] ]
+
+renderAddOverrideButtons : { isDisabled : Bool, isVisible : Bool } -> Html Msg
+renderAddOverrideButtons { isDisabled, isVisible } =
+    div [ class "flex space-x-1", classList [ ( "invisible", not isVisible ) ] ]
         [ div [ class "tooltip tooltip-left", attribute "data-tip" "Add Override" ]
             [ button
                 [ class "btn btn-sm btn-square btn-primary"
@@ -932,49 +934,51 @@ renderAddOverrideButtons {isDisabled, isVisible} =
             ]
         ]
 
+
 renderAddOverride : { feature : Maybe String } -> Html Msg
 renderAddOverride { feature } =
     form [ onSubmit <| HandleAddOverrideSubmit { keepOpen = False }, class "flex flex-col space-y-1" ]
-            [ div [ class "flex w-full h-9 items-center space-x-2" ]
-                [ overrideAddToggleButton
-                    { isVisible = True
-                    , isAdd = Maybe.Extra.isNothing feature
-                    }
-                , div [ class "flex-grow" ]
-                    [ case feature of
-                        Just featureText ->
-                            input
-                                [ type_ "text"
-                                , id featureInputId
-                                , placeholder "feature_name"
-                                , value featureText
-                                , class "input input-xs input-bordered w-full input-primary"
-                                , onInput HandleAddOverrideFeatureInput
-                                -- , onBlur HandleAddOverrideFeatureBlur -- This causes a bug where when you click the close button the input remains open.
-                                ]
-                                []
-
-                        Nothing ->
-                            div
-                                [ class "font-semibold cursor-pointer hover:text-primary"
-                                , onClick ToggleFeatureInput
-                                ]
-                                [ text "Add override" ]
-                    ]
-                , case feature of
+        [ div [ class "flex w-full h-9 items-center space-x-2" ]
+            [ overrideAddToggleButton
+                { isVisible = True
+                , isAdd = Maybe.Extra.isNothing feature
+                }
+            , div [ class "flex-grow" ]
+                [ case feature of
                     Just featureText ->
-                        renderAddOverrideButtons {isDisabled = featureText == "", isVisible = True}
+                        input
+                            [ type_ "text"
+                            , id featureInputId
+                            , placeholder "feature_name"
+                            , value featureText
+                            , class "input input-xs input-bordered w-full input-primary"
+                            , onInput HandleAddOverrideFeatureInput
+
+                            -- , onBlur HandleAddOverrideFeatureBlur -- This causes a bug where when you click the close button the input remains open.
+                            ]
+                            []
 
                     Nothing ->
-                        div [] []
+                        div
+                            [ class "font-semibold cursor-pointer hover:text-primary"
+                            , onClick ToggleFeatureInput
+                            ]
+                            [ text "Add override" ]
                 ]
+            , case feature of
+                Just featureText ->
+                    renderAddOverrideButtons { isDisabled = featureText == "", isVisible = True }
+
+                Nothing ->
+                    div [] []
+            ]
         , div
             [ class "w-full transition-height overflow-hidden flex space-x-2 items-center"
             , classList [ ( infoBoxHeight, Maybe.Extra.isJust feature ), ( "h-0", Maybe.Extra.isNothing feature ) ]
             ]
             [ overrideAddToggleButton { isVisible = False, isAdd = True }
-            , div [class "flex-grow"] [renderInfoBox]
-            , renderAddOverrideButtons {isVisible = False, isDisabled = False}
+            , div [ class "flex-grow" ] [ renderInfoBox ]
+            , renderAddOverrideButtons { isVisible = False, isDisabled = False }
             ]
         ]
 
@@ -1035,9 +1039,9 @@ renderActiveOverride override =
         baseColors =
             "bg-base-200 text-base-content"
     in
-    div [ class "flex w-full h-9 items-center space-x-2", classList [("animate-flash", override.isAnimating)] ]
+    div [ class "flex w-full h-9 items-center space-x-2", classList [ ( "animate-flash", override.isAnimating ) ] ]
         [ overrideCheckbox { isChecked = True, handleCheck = ToggleSelectOverride override }
-        , div [ class "flex-grow" ]
+        , div [ class "basis-3/4" ]
             [ input
                 [ type_ "text"
                 , value override.feature
@@ -1046,7 +1050,7 @@ renderActiveOverride override =
                 ]
                 []
             ]
-        , div [ class "flex-grow", classList [ ( "invisible", override.variantSelection /= CustomVariant ) ] ]
+        , div [ class "basis-1/4", classList [ ( "invisible", override.variantSelection /= CustomVariant ) ] ]
             [ input
                 [ type_ "text"
                 , id <| domIdForCustomVariantInput override
@@ -1075,7 +1079,7 @@ renderActiveOverride override =
 
 renderInactiveOverride : Override -> Html Msg
 renderInactiveOverride override =
-    div [ class "flex w-full h-9 items-center space-x-2", classList [("animate-flash", override.isAnimating)] ]
+    div [ class "flex w-full h-9 items-center space-x-2", classList [ ( "animate-flash", override.isAnimating ) ] ]
         [ overrideCheckbox { isChecked = False, handleCheck = ToggleSelectOverride override }
         , div [ class "flex-grow pl-2" ] [ div [] [ text override.feature ] ]
         , overrideDeleteButton { handleDelete = Archive override }
