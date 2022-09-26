@@ -1161,9 +1161,9 @@ renderActionBar model =
 renderFooter : Html Msg
 renderFooter =
     div [ class "flex justify-between items-center p-4 bg-neutral text-neutral-content" ]
-        [ div [] [ text "Feedback? Message @tristanp" ]
-        , div [ class "flex items-center space-x-1" ]
-            [ div [] [ text "v3.0" ]
+        [ div [] [ span [] [ text "Feedback? Message " ], span [ class "text-primary" ] [ text "@tristanp" ] ]
+        , div [ class "flex items-center space-x-2" ]
+            [ div [ class "font-mono text-opacity-50" ] [ text "v3.1" ]
             , button [ class "flex items-center space-x-1 py-0", onClick OpenGithub ]
                 [ div [] [ text "GitHub" ]
                 , FeatherIcons.externalLink
