@@ -74,11 +74,6 @@ variantSelectionFromString value =
             OffVariant
 
 
-legacyToNew : LegacyOverride -> Override
-legacyToNew { id, feature, variantSelection, customVariantText } =
-    { id = id, feature = feature, variantSelection = variantSelection, customVariantText = customVariantText, isAnimating = False }
-
-
 
 -- MODEL
 
@@ -105,15 +100,6 @@ type alias Override =
     , variantSelection : VariantSelection
     , customVariantText : String
     , isAnimating : Bool
-    }
-
-
-type alias LegacyOverride =
-    { id : Id
-    , feature : Feature
-    , variantSelection : VariantSelection
-    , customVariantText : String
-    , isSelected : Bool
     }
 
 
