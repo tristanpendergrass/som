@@ -1103,6 +1103,14 @@ renderFeatureFilter model =
         []
 
 
+renderTitle : Html Msg
+renderTitle =
+    span [ class "flex items-center space-x-2" ]
+        [ span [ class "leading-none font-mono" ] [ text "stormcrow_override" ]
+        , span [ class "leading-none text-2xl" ] [ text "Manager" ]
+        ]
+
+
 renderHeader : Model -> Html Msg
 renderHeader model =
     let
@@ -1115,7 +1123,7 @@ renderHeader model =
                     { settingsIconClass = "swap-off", closeIconClass = "swap-on", handleClick = SetActiveTab SettingsTab }
     in
     div [ class "w-full flex justify-between items-center bg-neutral text-neutral-content p-4" ]
-        [ div [ class "text-xl text-left font-extrabold" ] [ text "Stormcrow Override Manager" ]
+        [ div [ class "text-xl text-left font-extrabold" ] [ renderTitle ]
         , label [ class "btn btn-circle btn-ghost btn-sm swap swap-rotate", onClick handleClick ]
             [ FeatherIcons.settings
                 |> FeatherIcons.withClass settingsIconClass
