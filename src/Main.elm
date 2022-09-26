@@ -387,6 +387,7 @@ type Msg
     | SetActiveTab ActiveTab
     | FocusResult (Result Browser.Dom.Error ())
     | OpenGithub
+    | OpenDrlSom
     | OpenToken
     | HandleOverrideTokenInput String
     | SetTokenCreatedAt (Maybe Time.Posix)
@@ -608,6 +609,9 @@ update msg model =
 
         OpenGithub ->
             ( model, createTab "https://github.com/tristanpendergrass/som" )
+
+        OpenDrlSom ->
+            ( model, createTab "https://dbx.link/som" )
 
         OpenToken ->
             ( model, createTab "https://www.dropbox.com/admin/stormcrow#/override" )
@@ -1162,8 +1166,14 @@ renderFooter : Html Msg
 renderFooter =
     div [ class "flex justify-between items-center p-4 bg-neutral text-neutral-content" ]
         [ div [] [ span [] [ text "Feedback? Message " ], span [ class "text-primary" ] [ text "@tristanp" ] ]
-        , div [ class "flex items-center space-x-2" ]
+        , div [ class "flex items-center space-x-4" ]
             [ div [ class "font-mono text-opacity-50" ] [ text "v3.1" ]
+            , button [ class "flex items-center space-x-1 py-0", onClick OpenDrlSom ]
+                [ div [] [ text "drl/som" ]
+                , FeatherIcons.externalLink
+                    |> FeatherIcons.withSize 12
+                    |> FeatherIcons.toHtml []
+                ]
             , button [ class "flex items-center space-x-1 py-0", onClick OpenGithub ]
                 [ div [] [ text "GitHub" ]
                 , FeatherIcons.externalLink
