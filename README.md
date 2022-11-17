@@ -4,38 +4,39 @@ A chrome extension built with Elm to manage your stormcrow overrides. At the pre
 
 Storm icon credit: (srip)[https://www.flaticon.com/authors/srip].
 
-## Installation
+## Getting Started & Build
+
+Install Elm on your computer: https://guide.elm-lang.org/install/elm.html.
 
 ```
-$ git clone git@github.com:tristanpendergrass/som.git
-$ cd som
 $ npm install
+$ npm run build:css
 $ npm run build
 ```
 
-Then go to [chrome://extensions](chrome://extensions) and click "Load unpacked" and select the som directory.
-
 ## Development
 
-In one tab run this command to start the Tailwind CSS build watcher:
+There are "watch" versions of the two build commands. You must run each in a different terminal tab.
 
 ```
 $ npm run build:css:watch
 ```
 
-and in another tab run this command to build everything else:
+and in another tab:
 
 ```
 $ npm run build:watch
 ```
 
-You do not have to go through the "Load unpacked" step from installation again, just close and reopen the extension to see your changes.
+### Testing on Chrome
+
+Go to [chrome://extensions](chrome://extensions) and click "Load unpacked" and select the `som` directory. You only have to do this step once.
 
 ## Deployment
 
 - Bump the version number in static/manifest.json.
-- Bump the version number in Main.elm.
-- Run the above commands from Development to generate an up-to-date /dist folder.
+- Bump the version number in this view in Main.elm.
+- Run the build commands above to generate an up-to-date /dist folder.
 - Compress the /dist folder and upload to Chrome web store or wherever.
 
 ## Test
