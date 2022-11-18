@@ -6,7 +6,9 @@ Storm icon credit: (srip)[https://www.flaticon.com/authors/srip].
 
 ## Getting Started & Build
 
-Install Elm on your computer: https://guide.elm-lang.org/install/elm.html.
+1. Install Elm on your computer: https://guide.elm-lang.org/install/elm.html.
+
+2.
 
 ```
 $ npm install
